@@ -1,124 +1,169 @@
-/********************************************************
-** gateway.c
-**
-** Act as gateway between seiral host and 
-** message processing
-**
-********************************************************/
-#include <stddef.h>
+/********************************************************************
+ * ramses_esp
+ * gateway.c
+ *
+ * (C) 2023 Peter Price
+ *
+ * The Gateway host interface implements the emulation of an HGI80
+ * that is directly connected to the host via a USB port.
+ *
+ * RX messages are printed in the HGI80 format
+ * TX messages are accepted from the host and forwarded to the Host task
+ *
+ */
+static const char *TAG = "GATEWAY";
+#include "esp_log.h"
 
-#include "tty.h"
-#include "cmd.h"
-#include "trace.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/queue.h"
 
-#include "cc1101.h"
-#include "frame.h"
-#include "message.h"
-
-#include "cc1101_tune.h"
-#include "device.h"
+#include "esp_console.h"
 #include "gateway.h"
 
-#define GWAY_CLASS 18
-#define GWAY_ID 730
+struct gateway_data {
+  BaseType_t coreID;
+  TaskHandle_t   task;
+  QueueHandle_t  queue;
+};
 
-static uint8_t  MyClass = GWAY_CLASS;
-static uint32_t MyId = GWAY_ID;
+static struct gateway_data *gateway_ctxt( void ) {
+  static struct gateway_data gateway;
 
-static uint8_t inCmd;
-static char *cmdBuff;
-static uint8_t nCmd;
+  struct gateway_data *ctxt = NULL;
+  if( !ctxt ){
+    ctxt = &gateway;
+    // Initialisation?
+  }
 
-void gateway_init( void ) {
-  device_init( GWAY_CLASS );
-  device_get_id( &MyClass, &MyId );
-
-  cc_init();
-  frame_init();
-  msg_init();
-
-  // Force a version string to be printed
-  inCmd = cmd(CMD, NULL,NULL );
-  inCmd = cmd('V', NULL,NULL );
-  inCmd = cmd('\r', &cmdBuff, &nCmd );
+  return ctxt;
 }
 
-void gateway_work( void ) {
-  static struct message *rx = NULL;
-  static struct message *tx = NULL;
-  uint8_t byte; 
+/*************************************************************************
+ * TASK
+ */
 
-  frame_work();
-  msg_work();
+struct gateway_msg {
+  void (* msgFunc)( void *param );
+  void *param;
+};
 
-  // Print RX messages
-  if( rx ) {
-	static char msgBuff[TXBUF];  
-	static uint8_t nRx = 0;
+static BaseType_t gateway_msg_post( struct gateway_msg * msg ) {
+  BaseType_t res = pdFALSE;
 
-	// Do we still have outstanding text to send?
-	if( nRx ) {
-	  nRx -= tty_put_str( (uint8_t *)msgBuff, nRx );
+  struct gateway_data *ctxt = gateway_ctxt();
+  if( ctxt && ctxt->queue )
+    res = xQueueSend( ctxt->queue, msg, portTICK_PERIOD_MS );
+
+  return res;
+}
+
+static void Gateway( void *param ) {
+  struct gateway_data *ctxt = param;
+
+  ESP_LOGI( TAG, "Task Started");
+
+  ctxt->queue = xQueueCreate( 10, sizeof( struct gateway_msg ) );
+
+  do {
+    struct gateway_msg msg;
+    BaseType_t res = xQueueReceive( ctxt->queue, &msg, portTICK_PERIOD_MS);
+    if( res ){
+      if( msg.msgFunc )
+        ( msg.msgFunc )( msg.param );
     }
+  } while(1);
+}
 
-	if( !nRx ) {
-      nRx = msg_print( rx, msgBuff );
-      if( !nRx )
-        msg_free( &rx );
-	}
-  } else if( nCmd ) {
-    nCmd -= tty_put_str( (uint8_t *)cmdBuff, nCmd );
-    if( !nCmd )
-      inCmd = 0;
+/*************************************************************************
+ * Actions
+ */
+
+static void gateway_radio_rx_func( void *param ) {
+  struct message *msg = param;
+  ESP_LOGI( TAG, "process rx message %p",msg);
+
+  if( msg ) {
+	char msgBuff[256];
+    uint8_t len = msg_print_all( msg, msgBuff );
+    if( len )
+      printf(msgBuff);
+    msg_free( &msg );
+  }
+}
+
+void gateway_radio_rx( struct message **message ) {
+  struct gateway_msg msg = {
+    .msgFunc = gateway_radio_rx_func,
+	.param = *message
+  };
+
+  BaseType_t res = gateway_msg_post( &msg );
+  if( !res ) {
+	ESP_LOGE( TAG, "failed to post rx message");
+	msg_free( message );
   } else {
-	uint8_t tuning =  cc_tuneEnabled();
-
-    // If we get a message now we'll start printing it next time
-    rx = msg_rx_get();
-
-    if( tuning ) {
-      char cmdStr[TXBUF];
-      uint8_t nChar = cc_tune_work( rx, cmdStr );
-      if( nChar ) {
-        inCmd = cmd_str( cmdStr, &cmdBuff, &nCmd );
-      }
-    }
-
-	if( rx ) {
-      if( !msg_isValid(rx) ) {
-        if( !TRACE(TRC_ERROR) && !TRACE(TRC_TXERR) && !tuning )
-          msg_free(&rx);  // Silently dump error messages
-      }
-	}
+	*message = NULL;  // We own message now
   }
+}
 
-  // Process serial data from host
-  byte = tty_rx_get();
+/*************************************************************************
+ * TX messages
+ */
+static int gateway_radio_tx(int argc, char **argv) {
+  if( argc==8 ) {
+	char cmd[256];
+    sprintf( cmd, "%s %s %s %s %s %s %s %s",
+    		argv[0],argv[1],argv[2],argv[3],argv[4],argv[5],argv[6],argv[7]);
 
-  // Process commands
-  if( byte ) {
-    if( !nCmd && ( byte==CMD || inCmd ) ) {
-      inCmd = cmd( byte, &cmdBuff, &nCmd );
-      byte = '\0'; // byte has been used
-    }
+	ESP_LOGI( TAG, "%s",  cmd );
+  } else {
+	ESP_LOGI(TAG, "discarded %s + %d parameters",argv[0],argc-1);
   }
-  
-  // Process message bytes
-  if( byte ) {
-    if( !tx ) tx = msg_alloc();
+  return 0;
+}
 
-    if( tx ) { // TX message
-      if( msg_scan( tx, byte ) ) {
-		if( msg_isValid( tx ) ) {
-          msg_change_addr( tx,0, GWAY_CLASS,GWAY_ID , MyClass,MyId );
-          msg_tx_ready( &tx );
-        } else if( TRACE(TRC_TXERR) ) {
-          msg_rx_ready( &tx );
-	    } else {
-          msg_free( &tx );
-        }
-	  }
-    }
-  }
+static void gateway_register_tx(void) {
+    const esp_console_cmd_t i = {
+        .command = "I",
+        .help = "Send I message",
+        .hint = NULL,
+        .func = &gateway_radio_tx,
+    };
+    const esp_console_cmd_t w = {
+        .command = "W",
+        .help = "Send W message",
+        .hint = NULL,
+        .func = &gateway_radio_tx,
+    };
+    const esp_console_cmd_t rq = {
+        .command = "RQ",
+        .help = "Send RQ message",
+        .hint = NULL,
+        .func = &gateway_radio_tx,
+    };
+    const esp_console_cmd_t rp = {
+        .command = "I",
+        .help = "Send RP message",
+        .hint = NULL,
+        .func = &gateway_radio_tx,
+    };
 
+    ESP_ERROR_CHECK( esp_console_cmd_register(&i ) );
+    ESP_ERROR_CHECK( esp_console_cmd_register(&w ) );
+    ESP_ERROR_CHECK( esp_console_cmd_register(&rq) );
+    ESP_ERROR_CHECK( esp_console_cmd_register(&rp) );
+}
+
+/*************************************************************************
+ * External API
+ */
+
+void gateway_init( BaseType_t coreID ) {
+  struct gateway_data *ctxt = gateway_ctxt();
+  ctxt->coreID = coreID;
+
+  gateway_register_tx();
+
+  xTaskCreatePinnedToCore( Gateway, "Gateway", 4096, ctxt, 10, &ctxt->task, ctxt->coreID );
 }
