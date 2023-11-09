@@ -1,0 +1,78 @@
+menu "CC1101 Configuration"
+
+	config CC_GPIO_RANGE_MAX
+		int
+		default 48 if IDF_TARGET_ESP32S3
+
+    config CC_LOG_LEVEL
+        int "CC LOG LEVEL"
+        range 0	5
+        default 0
+        help
+        	Set LOG Level for CC1101 module
+        	0=None
+        	1=Error
+        	2=Warn
+        	3=Info
+        	4=Debug
+        	5=Verbose
+        	
+	config CC_MOSI_GPIO
+		int "CC1101 MOSI GPIO"
+		range 0 CC_GPIO_RANGE_MAX
+		default 35 if IDF_TARGET_ESP32S3
+		help
+			Pin Number to be used as the MOSI SPI signal.
+
+	config CC_SCK_GPIO
+		int "CC1101 SCK GPIO"
+		range 0 CC_GPIO_RANGE_MAX
+		default 36 if IDF_TARGET_ESP32S3
+		help
+			Pin Number to be used as the SCK SPI signal.
+
+	config CC_MISO_GPIO
+		int "CC1101 MISO GPIO"
+		range 0 CC_GPIO_RANGE_MAX
+		default 37 if IDF_TARGET_ESP32S3
+		help
+			Pin Number to be used as the MISO SPI signal.
+
+	config CC_CSN_GPIO
+		int "CC1101 CSN GPIO"
+		range 0 CC_GPIO_RANGE_MAX
+		default 38 if IDF_TARGET_ESP32S3
+		help
+			Pin Number to be used as the CSN SPI signal.
+
+	config CC_GDO0_GPIO
+		int "CC1101 GDO0 GPIO"
+		range 0 CC_GPIO_RANGE_MAX
+		default 39 if IDF_TARGET_ESP32S3
+		help
+			Pin Number to be used as the GDO0 signal.
+
+	config CC_GDO2_GPIO
+		int "CC1101 GDO2 GPIO"
+		range 0 CC_GPIO_RANGE_MAX
+		default 40 if IDF_TARGET_ESP32S3
+		help
+			Pin Number to be used as the GDO0 signal.
+
+	choice SPI_HOST
+		prompt "SPI peripheral that controls this bus"
+		default CC_SPI2_HOST
+		help
+			Select SPI peripheral that controls this bus.
+		config CC_SPI2_HOST
+			bool "CC_SPI2_HOST"
+			help
+				Use SPI2_HOST. This is also called HSPI_HOST.
+		config CC_SPI3_HOST
+			depends on IDF_TARGET_ESP32S3
+			bool "CC_SPI3_HOST"
+			help
+				USE SPI3_HOST. This is also called VSPI_HOST
+	endchoice
+
+endmenu
