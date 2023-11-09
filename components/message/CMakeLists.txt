@@ -3,3 +3,4 @@ idf_component_register(
     INCLUDE_DIRS .
     REQUIRES gateway
 )
+component_compile_options(-Wimplicit-fallthrough)
