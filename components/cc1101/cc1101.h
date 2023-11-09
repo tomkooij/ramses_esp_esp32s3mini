@@ -1,12 +1,12 @@
-/*********************************************************
-*
-* cc1101.h
-* ========
-*
-* Hardware interface to TI CC1101 radio chip
-*
-*/
-
+/********************************************************************
+ * ramses_esp
+ * cc1101.h
+ *
+ * (C) 2023 Peter Price
+ *
+ * Hardware interface to TI CC1101 radio chip
+ *
+ */
 #ifndef _CC1101_H_
 #define _CC1101_H_
 
