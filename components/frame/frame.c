@@ -355,7 +355,7 @@ uint8_t frame_tx_byte(uint8_t *byte) {
 #endif
 
 static void frame_tx_done(void) {
-  msg_tx_done();
+//  msg_tx_done();
   frame_tx_reset();
 }
 
