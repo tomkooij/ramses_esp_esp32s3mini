@@ -1,9 +1,12 @@
-/********************************************************
-** message.h
-**
-** Packet conversion to message
-**
-********************************************************/
+/********************************************************************
+ * ramses_esp
+ * message.h
+ *
+ * (C) 2023 Peter Price
+ *
+ * RAMSES message handling
+ *
+ */
 #ifndef _MESSAGE_H_
 #define _MESSAGE_H_
 
@@ -50,6 +53,7 @@ extern void msg_rx_ready( struct message **msg );
 extern struct message *msg_rx_get(void);
 extern uint8_t msg_print( struct message *msg, char *msgBuff );
 extern void msg_change_addr( struct message *msg, uint8_t addr, uint8_t Class,uint32_t Id , uint8_t myClass,uint32_t myId );
+extern uint8_t msg_print_all( struct message *msg, char *msg_buff );
 
 // TX Messages
 extern void msg_tx_ready( struct message **msg );

@@ -1,22 +1,27 @@
-/********************************************************
-** message.c
-**
-** Packet conversion to message
-**
-********************************************************/
-#include <string.h>
+/********************************************************************
+ * ramses_esp
+ * message.c
+ *
+ * (C) 2023 Peter Price
+ *
+ * RAMSES message handling
+ * Convert between message data bytes and internal message structure
+ *
+ * Provide support functions to format messages for Host interfaces
+ * Interpret TX messages provided by Host
+ *
+ */
 #include <stdio.h>
+#include <string.h>
 
-#include <avr/interrupt.h>
-#include <avr/pgmspace.h>
+static const char * TAG = "MSG";
+#include "esp_log.h"
 
-#include "config.h"
-#include "trace.h"
-
-#include "frame.h"
+#include "gateway.h"
 #include "message.h"
 
-#define DEBUG_MSG(_v) DEBUG4(_v)
+#define TRACE(_t)     ( 0 )
+#define DEBUG_MSG(_i) do{}while(0)
 
 /********************************************************
 ** Message status
@@ -59,6 +64,9 @@ enum message_state {
 #define MAX_RAW 162
 #define MAX_PAYLOAD 64
 struct message {
+  struct message *next;
+  struct message *prev;
+
   uint8_t state;
   uint8_t count;
 
@@ -91,53 +99,66 @@ static void msg_reset( struct message *msg ) {
 /********************************************************
 ** Message lists
 ********************************************************/
-#define N_MSG 4
-#define N_LIST ( N_MSG+1 ) // Queues are bigger than total number of messsages so can never be full
-
 struct msg_list {
-  struct message *msg[N_LIST];
-  uint8_t in;
-  uint8_t out;
+  struct message *in;
+  struct message *out;
 };
 
 static void msg_put( struct msg_list *list, struct message **ppMsg, uint8_t reset ) {
-  if( ppMsg != NULL ) {
+  if( ppMsg && list ) {
     struct message *pMsg = (*ppMsg);
-      if( pMsg != NULL ) {
+    if( pMsg ) {
 
       if( reset )
         msg_reset( pMsg );
 
-      list->msg[list->in] = pMsg;
-      list->in = ( list->in + 1 ) % N_LIST;
+      pMsg->prev = list->in;
+      pMsg->next = NULL;
+
+      list->in = pMsg;
+      if( !list->out )      // list was empty
+        list->out = pMsg;   // so this is the first message
+
       (*ppMsg) = NULL;
     }
   }
 }
 
 static struct message *msg_get( struct msg_list *list ) {
-  struct message *msg = list->msg[ list->out ];
+  struct message *pMsg = NULL;
+  if( list ) {
+    pMsg = list->out;
 
-  if( msg != NULL ) {
-    list->msg[list->out] = NULL;
-    list->out = ( list->out+1 ) % N_LIST;
-    msg->state = S_START;
+    if( pMsg ) {
+      list->out = pMsg->next;
+
+      pMsg->next = NULL;
+      if( pMsg->prev ) {
+        ( pMsg->prev )->next = NULL;
+        pMsg->prev = NULL;
+      } else {              // message was last in list
+        list->in = NULL;    // So list is empty
+      }
+
+      pMsg->state = S_START;
+    }
   }
 
-  return msg;
+  return pMsg;
 }
 
 /********************************************************
 ** Message structure pool
 ********************************************************/
+
 static struct msg_list msg_pool;
 void msg_free( struct message **msg ) { msg_put( &msg_pool, msg, 1 ); }
 struct message *msg_alloc(void) {  return msg_get( &msg_pool); }
 
 static void msg_create_pool(void) {
-  static struct message MSG[N_MSG];
+  static struct message MSG[CONFIG_N_MSG];
   uint8_t i;
-  for( i=0 ; i<N_MSG ; i++ ) {
+  for( i=0 ; i<CONFIG_N_MSG ; i++ ) {
     struct message *msg = &MSG[i];
     msg_free( &msg );
   }
@@ -147,7 +168,7 @@ static void msg_create_pool(void) {
 ** Received Message list
 ********************************************************/
 static struct msg_list rx_list;
-void msg_rx_ready( struct message **msg ) { msg_put( &rx_list, msg, 0 ); }
+void msg_rx_ready( struct message **msg ) { gateway_radio_rx( msg ); }
 struct message *msg_rx_get(void) { return msg_get( &rx_list ); }
 
 
@@ -218,7 +239,7 @@ static uint8_t get_header( uint8_t flags ) {
 static uint8_t msg_checksum( struct message *msg ) {
   uint8_t csum;
   uint8_t i,j;
-  
+
   // Missing fields will be zero so we can just add them to checksum without testing presence
                                                   { csum  = get_header(msg->fields); }
   for( i=0 ; i<3 ; i++ ) { for( j=0 ; j<3 ; j++ ) { csum += msg->addr[i][j]; }       }
@@ -226,7 +247,7 @@ static uint8_t msg_checksum( struct message *msg ) {
   for( i=0 ; i<2 ; i++ )                          { csum += msg->opcode[i];          }
                                                   { csum += msg->len;                }
   for( i=0 ; i<msg->nPayload ; i++ )              { csum += msg->payload[i];         }
-  
+
   return -csum;
 }
 
@@ -249,13 +270,16 @@ static void msg_get_address( uint8_t *addr, uint8_t *class, uint32_t *id ) {
 /********************************************************
 ** Message Print
 ********************************************************/
+#define sprintf_P sprintf
+#define PSTR(_s) _s
+
 static uint8_t msg_print_rssi( char *str, uint8_t rssi, uint8_t valid ) {
   uint8_t n = 0;
 
   if( valid ) {
-    n = sprintf_P(str, PSTR("%03u "), rssi );
+    n = sprintf(str, PSTR("%03u "), rssi );
   } else {
-    n = sprintf_P(str, PSTR("--- "));
+    n = sprintf(str, PSTR("--- "));
   }
 
   return n;
@@ -276,7 +300,7 @@ static uint8_t msg_print_addr( char *str, uint8_t *addr, uint8_t valid ) {
     uint8_t class;
     uint32_t id;
 	msg_get_address( addr, &class,&id );
-	
+
     n = sprintf_P(str, PSTR("%02hu:%06lu "), class, id );
   } else {
     n = sprintf_P(str, PSTR("--:------ "));
@@ -329,22 +353,29 @@ static uint8_t msg_print_payload( char *str, uint8_t payload ) {
   return n;
 }
 
-
-static uint8_t msg_print_error( char *str, uint8_t error ) {
-  static char const msg_err_OK[] PROGMEM = "" ;
-  static char const msg_err_UNKNOWN[] PROGMEM = "UNKNOWN" ;
-#define _MSG_ERR(_e,_t) static char const msg_err_ ## _e[] PROGMEM = _t ;
+static char const * const msg_error_str( uint8_t error )
+{
+  static char const msg_err_OK[] = "OK" ;
+  static char const msg_err_UNKNOWN[] = "UNKNOWN" ;
+#define _MSG_ERR(_e,_t) static char const msg_err_ ## _e[] = _t ;
   _MSG_ERR_LIST
 #undef _MSG_ERR
 #define _MSG_ERR(_e,_t) , msg_err_ ## _e
-  static char const *const msg_err[MSG_ERR_MAX+1] PROGMEM = { msg_err_OK _MSG_ERR_LIST, msg_err_UNKNOWN };
+  static char const *const msg_err[MSG_ERR_MAX+1] = { msg_err_OK _MSG_ERR_LIST, msg_err_UNKNOWN };
 #undef _MSG_ERR
 
+  char const * str = "ERROR";
+  if( error>MSG_ERR_MAX ) error = MSG_ERR_MAX;
+  str = msg_err[error];
+
+ return str;
+}
+
+static uint8_t msg_print_error( char *str, uint8_t error ) {
   uint8_t n;
 
   if( error ) {
-    if( error>MSG_ERR_MAX ) error = MSG_ERR_MAX;
-    n = sprintf_P( str, PSTR(" * %S\r\n"), (PGM_P)pgm_read_word( msg_err + error ) );
+    n = sprintf_P( str, PSTR(" * %s\r\n"), msg_error_str(error) );
   } else {
     n = sprintf_P(str,PSTR("\r\n"));
   }
@@ -521,6 +552,16 @@ uint8_t msg_print( struct message *msg, char *msg_buff ) {
   return n;
 }
 
+uint8_t msg_print_all( struct message *msg, char *msg_buff ) {
+  uint8_t len = 0;
+
+  msg->state = S_START;
+  do {
+    len += msg_print( msg, msg_buff+len );
+  } while( msg->state != S_COMPLETE );
+
+  return len;
+}
 /********************************************************
 ** RX Message processing
 ********************************************************/
@@ -528,6 +569,8 @@ static uint8_t msg_rx_header( struct message *msg, uint8_t byte ) {
   uint8_t state = S_ADDR0;
 
   msg->fields = get_hdr_flags( byte );
+
+  ESP_LOGD( TAG, "HDR %02x", msg->fields);
 
   return state;
 }
@@ -540,6 +583,7 @@ static uint8_t msg_rx_addr( struct message *msg, uint8_t addr, uint8_t byte ) {
     msg->count = 0;
     state += 1;
     msg->rxFields |= F_ADDR0 << addr;
+    ESP_LOGD( TAG, "ADDR[%d] %02x.%02x.%02x",addr,msg->addr[addr][0],msg->addr[addr][1],msg->addr[addr][2] );
   }
 
   return state;
@@ -551,6 +595,7 @@ static uint8_t msg_rx_param( struct message *msg, uint8_t param, uint8_t byte ) 
   msg->param[param] = byte;
   state += 1;
   msg->rxFields |= F_PARAM0 << param;
+  ESP_LOGD( TAG, "PARAM[%d] %02x",param,msg->param[param] );
 
   return state;
 }
@@ -563,6 +608,7 @@ static uint8_t msg_rx_opcode( struct message *msg, uint8_t byte ) {
     msg->count = 0;
     state += 1;
     msg->rxFields |= F_OPCODE ;
+    ESP_LOGD( TAG, "OPCODE %02x.%02x",msg->opcode[0],msg->opcode[1] );
   }
 
   return state;
@@ -574,6 +620,7 @@ static uint8_t msg_rx_len( struct message *msg, uint8_t byte ) {
   msg->len = byte;
   state += 1;
   msg->rxFields |= F_LEN;
+  ESP_LOGD( TAG, "LEN %d", msg->len);
 
   return state;
 }
@@ -582,6 +629,7 @@ static uint8_t msg_rx_payload( struct message *msg, uint8_t byte ) {
   uint8_t state = S_PAYLOAD;
 
   if( msg->nPayload < MAX_PAYLOAD ) {
+    ESP_LOGD( TAG, "PAY[%d] %02x", msg->nPayload,byte);
     msg->payload[msg->nPayload++] = byte;
   }
 
@@ -600,12 +648,16 @@ static uint8_t msg_rx_checksum( struct message *msg, uint8_t byte __attribute__(
   if( msg->csum != 0 && !msg->error )
     msg->error = MSG_CSUM_ERR;
 
+  ESP_LOGD( TAG, "CSUM %02x (%s)", msg->csum,msg_error_str(msg->error) );
+
   return state;
 }
 
 static struct message *msgRx;
 static void msg_rx_process(uint8_t byte) {
   msgRx->csum += byte;
+  ESP_LOGD( TAG, "byte=%02x",byte );
+
   switch( msgRx->state ) {
     case S_START: // not processed here - fallthrough
     case S_HEADER:                                   { msgRx->state = msg_rx_header( msgRx, byte );   break; }
@@ -624,6 +676,8 @@ static void msg_rx_process(uint8_t byte) {
 void msg_rx_rssi( uint8_t rssi ) {
   msgRx->rssi = rssi;
   msgRx->rxFields |= F_RSSI;
+
+  ESP_LOGI( TAG, "rssi=%03d",rssi );
 }
 
 uint8_t *msg_rx_start(void) {
@@ -635,6 +689,8 @@ uint8_t *msg_rx_start(void) {
     raw = msgRx->raw;
     raw[0] = MAX_RAW;
   }
+
+  ESP_LOGI( TAG, "START" );
 
   DEBUG_MSG(0);
 
@@ -665,12 +721,15 @@ void msg_rx_end( uint8_t nBytes, uint8_t error ) {
     }
   }
 
+  ESP_LOGI( TAG, "END[%d] (%s)",nBytes,msg_error_str(error) );
+
   msgRx->error = error;
   msg_rx_ready( &msgRx );
 
   DEBUG_MSG(0);
 }
 
+#if 0
 /********************************************************
 ** TX Message scan
 ********************************************************/
@@ -1051,7 +1110,7 @@ void msg_tx_done(void) {
     msg_rx_ready( &TxMsg );
   }
 }
-
+#endif
 /************************************************************************************
 **
 ** Message status functions
@@ -1086,11 +1145,13 @@ uint8_t msg_isTx( struct message *msg ) {
 **/
 
 void msg_work(void) {
+#if 0
  if( !TxMsg ) {
     struct message *tx1 = msg_tx_get();
     if( tx1 )
       msg_tx_start( &tx1 );
   }
+#endif
 }
 
 /********************************************************
@@ -1098,5 +1159,7 @@ void msg_work(void) {
 ********************************************************/
 
 void msg_init( void ) {
+  esp_log_level_set(TAG, CONFIG_MSG_LOG_LEVEL );
+
   msg_create_pool();
 }
