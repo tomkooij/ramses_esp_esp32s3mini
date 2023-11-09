@@ -1,0 +1,10 @@
+build
+binaries
+archives
+managed_components
+
+*.old
+*.log
+*.lock
+
+sdkconfig
