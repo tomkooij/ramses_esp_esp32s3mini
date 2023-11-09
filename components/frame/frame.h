@@ -1,3 +1,12 @@
+/********************************************************************
+ * ramses_esp
+ * frame.h
+ *
+ * (C) 2023 Peter Price
+ *
+ * Frame handler public API
+ *
+ */
 #ifndef _FRAME_H_
 #define _FRAME_H_
 

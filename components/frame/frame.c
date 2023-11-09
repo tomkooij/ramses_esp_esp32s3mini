@@ -1,20 +1,37 @@
+/********************************************************************
+ * ramses_esp
+ * frame.h
+ *
+ * (C) 2023 Peter Price
+ *
+ * Frame handler
+ *
+ * Detects the presence of RX messages in UART data
+ * Extracts RX frames and removes manchester encoding of message data bytes
+ * Acquires the RSSI value for RX messages
+ *
+ * Manages the transition to TX mode when required.
+ *
+ * Builds Raw frame adding manchester encoding of message data
+ *
+ */
+#include <stdio.h>
 #include <string.h>
-#include <util/delay.h>
 
-#include <avr/interrupt.h>
-#include <avr/pgmspace.h>
+#include <driver/uart.h>
 
-#include "config.h"
-#include "message.h"
-#include "uart.h"
+static const char * TAG = "FRM";
+#include "esp_log.h"
+
 #include "cc1101.h"
-
+#include "uart.h"
 #include "frame.h"
+#include "message.h"
 
-#define DEBUG_FRAME(_v)    DEBUG3(_v)
+#define DEBUG_FRAME(_i) do{}while(0)
 
 /***********************************************************************************
-** RX Frame state machine
+** Frame state machine
 */
 
 enum frame_states {
@@ -61,18 +78,18 @@ static void frame_reset(void) {
 */
 
 // Convert big-endian 4 bits to little-endian byte
-static uint8_t const man_encode[16] PROGMEM = {
+static uint8_t const man_encode[16] = {
   0xAA, 0xA9, 0xA6, 0xA5,  0x9A, 0x99, 0x96, 0x95,
   0x6A, 0x69, 0x66, 0x65,  0x5A, 0x59, 0x56, 0x55
 };
-#define MAN_ENCODE(_i) pgm_read_byte( man_encode+(_i) )
+#define MAN_ENCODE(_i) man_encode[_i]
 
 // Convert little-endian 4 bits to 2-bit big endian
-static uint8_t const man_decode[16] PROGMEM = {
+static uint8_t const man_decode[16] = {
   0xF, 0xF, 0xF, 0xF, 0xF, 0x3, 0x2, 0xF,
   0xF, 0x1, 0x0, 0xF, 0xF, 0xF, 0xF, 0xF
 };
-#define MAN_DECODE(_i) pgm_read_byte( man_decode+(_i) )
+#define MAN_DECODE(_i) man_decode[_i]
 
 static inline int manchester_code_valid( uint8_t code ) {
  return ( MAN_DECODE( (code>>4)&0xF )!=0xF ) && ( MAN_DECODE( (code   )&0xF )!=0xF ) ;
@@ -92,13 +109,26 @@ static inline uint8_t manchester_encode( uint8_t value ) {
   ;
 }
 
-/***********************************************************************************
-** RX FRAME processing
+/*******************************************************
+** RAMSES Frame
+** A frame consists of <training><header><message><trailer><training>
+** <training>  is a pattern of alternating 0 and 1 bits <0x55>
+**   <header>  is a fixed sequence of bytes that identify the packet as a RAMSES packet
+**             a 16 bit synch word <FF><00> followed by a 3 byte magic pattern <33><55><53>
+**  <message>  variable length RAMSES message.  Message data is Manchester encoded.
+**  <trailer>  is a single byte that marks end of packet
 **
-** A frame consists of <header><messaeg><trailer>
-**  <header>  is a fixed sequence of bytes that identify the packet as an evohome packet
-**  <message> varaiable length evohome message.. Data is manchester encoded.
-** <trailer>  is a single byte (not a valid manchester code value) that marks end of packet
+** The <header> and <trailer> are made from bytes that are not valid Manchester code values
+*/
+static uint8_t ramses_synch[] = { 0xFF, 0x00 };
+static uint8_t ramses_hdr[]   = { 0x33, 0x55, 0x53 };
+static uint8_t ramses_tlr[]   = { 0x35 };
+
+// New frame start pattern
+static uint32_t syncWord;
+
+/*******************************************************
+* RX Frame processing
 */
 
 enum frame_rx_states {
@@ -110,8 +140,8 @@ enum frame_rx_states {
   FRM_RX_ABORT
 };
 
-static struct frame_rx {
-  uint8_t  state;
+static struct rx_frame {
+  enum frame_rx_states state;
 
   uint8_t nBytes;
   uint8_t nRaw;
@@ -128,56 +158,43 @@ static void frame_rx_reset(void) {
   memset( &rxFrm, 0, sizeof(rxFrm) );
 }
 
-static uint8_t evo_hdr[] = { 0x33, 0x55, 0x53 };
-static uint8_t evo_tlr[] = { 0x35 };
-static uint32_t syncWord;
-
-void frame_rx_byte(uint8_t byte) {
-  switch( rxFrm.state ) {
+void frame_rx_byte( uint8_t b )
+{
+  switch( rxFrm.state )
+  {
+  case FRM_RX_OFF:
+	break;
 
   case FRM_RX_IDLE:
-    rxFrm.syncBuffer = byte;
-    if( byte == evo_hdr[0] )
-      rxFrm.state = FRM_RX_SYNCH;
-    break;
-
-  case FRM_RX_SYNCH:
+  case FRM_RX_SYNCH: // wait for the <header>
     rxFrm.syncBuffer <<= 8;
-  	if( ( byte==0x00 ) || ( byte==0xFF ) || ( rxFrm.syncBuffer & 0xFF000000 ) ) {
-      rxFrm.state = FRM_RX_IDLE;
-	  break;
-    }
-
-    rxFrm.syncBuffer |= byte;
-    if( rxFrm.syncBuffer == syncWord )
-    {
+    rxFrm.syncBuffer |= b;
+    if( rxFrm.syncBuffer==syncWord ) {
+      ESP_LOGI( TAG, "SYNCH" );
       rxFrm.raw = msg_rx_start();
       if( rxFrm.raw ) {
         rxFrm.nRaw = rxFrm.raw[0];
-        rxFrm.state  = FRM_RX_MESSAGE;
+	    rxFrm.state  = FRM_RX_MESSAGE;
         DEBUG_FRAME(1);
-      }
-    }
-	break;
+	  }
+	}
+    break;
 
   case FRM_RX_MESSAGE:
-    if( byte==0x00 ) {
-      rxFrm.state = FRM_RX_ABORT;
-      rxFrm.msgErr = MSG_CLSN_ERR;
-    } else if( byte==FRM_LOST_SYNC ) {
-      rxFrm.state = FRM_RX_ABORT;
-      rxFrm.msgErr = MSG_SYNC_ERR;
-    } else if( byte == evo_tlr[0] ) {
-      rxFrm.state = FRM_RX_DONE;
+    if( b == ramses_tlr[0] ) {
+	  rxFrm.state = FRM_RX_DONE;
+      ESP_LOGI( TAG, "DONE raw=%d msg=%d",rxFrm.nBytes, 1 );
     } else {
-      rxFrm.raw[rxFrm.nBytes++] = byte;
+      ESP_LOGD( TAG, "raw[%d]=%02x",rxFrm.nBytes, b );
+      rxFrm.raw[rxFrm.nBytes++] = b;
 
-      if( !manchester_code_valid( byte ) ) {
+      if( !manchester_code_valid( b ) ) {
         rxFrm.state = FRM_RX_ABORT;
         rxFrm.msgErr = MSG_MANC_ERR;
+        ESP_LOGE( TAG, "raw[%d]=%02x",rxFrm.nBytes-1, b );
       } else {
         rxFrm.msgByte <<= 4;
-        rxFrm.msgByte |= manchester_decode( byte );
+        rxFrm.msgByte |= manchester_decode( b );
         rxFrm.count = 1- rxFrm.count;
 
         if( !rxFrm.count ) {
@@ -186,22 +203,20 @@ void frame_rx_byte(uint8_t byte) {
             rxFrm.state = FRM_RX_ABORT;
         }
       }
+
+      // Protect raw data buffer
+      if( rxFrm.nBytes >= rxFrm.nRaw ) {
+        rxFrm.state = FRM_RX_ABORT;
+        rxFrm.msgErr = MSG_OVERRUN_ERR;
+      }
     }
     break;
-  }
 
-  // Protect raw data buffer
-  if( rxFrm.state > FRM_RX_SYNCH && rxFrm.state < FRM_RX_DONE ) {
-    if( rxFrm.nBytes >= rxFrm.nRaw ) {
-      rxFrm.state = FRM_RX_ABORT;
-      rxFrm.msgErr = MSG_OVERRUN_ERR;
-    }
-  }
-
-  if( rxFrm.state >= FRM_RX_DONE ) {
+  case FRM_RX_DONE:
+  case FRM_RX_ABORT:
     DEBUG_FRAME(0);
+    break;
   }
-
 }
 
 static void frame_rx_done(void) {
@@ -259,6 +274,7 @@ static void frame_tx_reset(void) {
   memset( &txFrm, 0, sizeof(txFrm) );
 }
 
+#if 0
 static uint8_t tx_prefix[] = {
   0x55, 0x55, 0x55, 0x55, 0x55,   // Pre-amble
   0xFF, 0x00,                     // Sync Word
@@ -336,6 +352,7 @@ uint8_t frame_tx_byte(uint8_t *byte) {
 
   return done;
 }
+#endif
 
 static void frame_tx_done(void) {
   msg_tx_done();
@@ -363,7 +380,7 @@ static void frame_tx_enable(void) {
   frame.state = FRM_TX;
   txFrm.state = FRM_TX_IDLE;
 
-  uart_tx_enable();
+//  uart_tx_enable();
 }
 
 void frame_disable(void) {
@@ -375,10 +392,19 @@ void frame_disable(void) {
 
 void frame_init(void) {
   uint8_t i;
-  for( i=0 ; i<sizeof(evo_hdr) ; i++ )
-    syncWord = ( syncWord<<8 ) | evo_hdr[i];
+
+  esp_log_level_set(TAG, CONFIG_FRM_LOG_LEVEL );
+
+  // When trying to detect the start of a new frame we'll just look for
+  // that last 32 bits of the <header>
+  for( i=0 ; i<sizeof(ramses_synch) ; i++ )
+    syncWord = ( syncWord<<8 ) | ramses_synch[i];
+  for( i=0 ; i<sizeof(ramses_hdr) ; i++ )
+    syncWord = ( syncWord<<8 ) | ramses_hdr[i];
 
   frame_reset();
+
+  cc_init();
   uart_init();
 
   frame.state = FRM_IDLE;
