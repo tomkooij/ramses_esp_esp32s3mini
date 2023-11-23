@@ -15,11 +15,14 @@
  */
 #include "freertos/FreeRTOS.h"
 
+#include "esp_debug.h"
 #include "radio.h"
 #include "host.h"
 
 void app_main(void)
 {
+  esp_debug_init();
+
   Radio_init( CONFIG_RADIO_CORE );
   Host_init( CONFIG_HOST_CORE );
 }

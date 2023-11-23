@@ -6,5 +6,5 @@ idf_component_register(
     INCLUDE_DIRS
     PRIV_INCLUDE_DIRS
     REQUIRES 
-    PRIV_REQUIRES console driver cc1101 frame message gateway
+    PRIV_REQUIRES console driver cc1101 frame message gateway esp_debug
 )

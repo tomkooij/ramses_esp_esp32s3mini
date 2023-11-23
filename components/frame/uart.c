@@ -21,6 +21,10 @@ static const char * TAG = "UART";
 #include "uart.h"
 #include "frame.h"
 
+#include "esp_debug.h"
+#define DEBUG_UART(_i)    do{if(_i)DEBUG2_ON;else DEBUG2_OFF;}while(0)
+#define DEBUG_DATA(_i)    do{if(_i)DEBUG3_ON;else DEBUG3_OFF;}while(0)
+
 static uart_port_t const uart_num = UART_NUM_1;
 static QueueHandle_t uartQ;
 
@@ -65,13 +69,18 @@ static void rx_stop(void) {
 static void uart_work_rx(void) {
   uart_event_t event = {0};
   if( xQueueReceive( uartQ, &event, portTICK_PERIOD_MS  )) {
+	DEBUG_UART(1);
     if( event.size ) {
-	    size_t i;
-	    uint8_t dtmp[256];
-	    uart_read_bytes( uart_num, dtmp, event.size, portTICK_PERIOD_MS/10 );
-	    for( i=0 ; i<event.size ;  i++ )
-		    frame_rx_byte( dtmp[i] );
-	  }
+      size_t i;
+      uint8_t dtmp[256];
+      uart_read_bytes( uart_num, dtmp, event.size, portTICK_PERIOD_MS/10 );
+      for( i=0 ; i<event.size ;  i++ ) {
+        DEBUG_DATA(1);
+        frame_rx_byte( dtmp[i] );
+        DEBUG_DATA(0);
+      }
+    }
+    DEBUG_UART(0);
   }
 }
 

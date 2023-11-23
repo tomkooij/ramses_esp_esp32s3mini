@@ -1,0 +1,57 @@
+menu "Debug Configuration"
+
+    config DEBUG_PIN1
+        int "Debug pin 1"
+        range 0	11
+        default 6
+        help
+        	Debug Pin 1 GPIO
+        	0=Disable
+        	6-11=GPIO
+
+    config DEBUG_PIN2
+        int "Debug pin 2"
+        range 0	11
+        default 7
+        help
+        	Debug Pin 2 GPIO
+        	0=Disable
+        	6-11=GPIO
+        	
+    config DEBUG_PIN3
+        int "Debug pin 3"
+        range 0	11
+        default 8
+        help
+        	Debug Pin 3 GPIO
+        	0=Disable
+        	6-11=GPIO
+
+    config DEBUG_PIN4
+        int "Debug pin 4"
+        range 0	11
+        default 9
+        help
+        	Debug Pin 1 GPIO
+        	0=Disable
+        	6-11=GPIO
+
+    config DEBUG_PIN5
+        int "Debug pin 5"
+        range 0	12 
+        default 10
+        help
+        	Debug Pin 5 GPIO
+        	0=Disable
+        	6-11=GPIO
+
+    config DEBUG_PIN6
+        int "Debug pin 6"
+        range 0	11
+        default 11
+        help
+        	Debug Pin 6 GPIO
+        	0=Disable
+        	6-11=GPIO
+
+endmenu

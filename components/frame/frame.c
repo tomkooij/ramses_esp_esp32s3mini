@@ -28,7 +28,8 @@ static const char * TAG = "FRM";
 #include "frame.h"
 #include "message.h"
 
-#define DEBUG_FRAME(_i) do{}while(0)
+#include "esp_debug.h"
+#define DEBUG_FRAME(_i)   do{if(_i)DEBUG1_ON;else DEBUG1_OFF;}while(0)
 
 /***********************************************************************************
 ** Frame state machine
