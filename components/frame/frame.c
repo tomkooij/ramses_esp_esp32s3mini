@@ -1,6 +1,6 @@
 /********************************************************************
  * ramses_esp
- * frame.h
+ * frame.c
  *
  * (C) 2023 Peter Price
  *
@@ -23,6 +23,7 @@
 static const char * TAG = "FRM";
 #include "esp_log.h"
 
+#include "led.h"
 #include "cc1101.h"
 #include "uart.h"
 #include "frame.h"
@@ -177,6 +178,7 @@ void frame_rx_byte( uint8_t b )
         rxFrm.nRaw = rxFrm.raw[0];
 	    rxFrm.state  = FRM_RX_MESSAGE;
         DEBUG_FRAME(1);
+        led_on(LED_RX);
 	  }
 	}
     break;
@@ -236,6 +238,7 @@ static void frame_rx_done(void) {
   msg_rx_end(nBytes,msgErr);
 
   DEBUG_FRAME(0);
+  led_off(LED_RX);
 }
 
 /***********************************************************************************
@@ -427,6 +430,7 @@ void frame_work(void) {
     }
     if( rxFrm.state<FRM_RX_MESSAGE ) {
       if( txFrm.state==FRM_TX_READY ) {
+        led_on(LED_TX);
         frame_tx_enable();
       } else if( rxFrm.state==FRM_RX_OFF ) {
         frame_rx_enable();
@@ -436,6 +440,7 @@ void frame_work(void) {
 
   case FRM_TX:
     if( txFrm.state>=FRM_TX_DONE ) {
+      led_off(LED_TX);
       frame_tx_done();
       frame_rx_enable();
     }
