@@ -22,6 +22,7 @@
 
 static const char * TAG = "FRM";
 #include "esp_log.h"
+#include "esp_err.h"
 
 #include "led.h"
 #include "cc1101.h"
@@ -160,10 +161,8 @@ static void frame_rx_reset(void) {
   memset( &rxFrm, 0, sizeof(rxFrm) );
 }
 
-void frame_rx_byte( uint8_t b )
-{
-  switch( rxFrm.state )
-  {
+void frame_rx_byte( uint8_t b ) {
+  switch( rxFrm.state ) {
   case FRM_RX_OFF:
 	break;
 
@@ -194,7 +193,7 @@ void frame_rx_byte( uint8_t b )
       if( !manchester_code_valid( b ) ) {
         rxFrm.state = FRM_RX_ABORT;
         rxFrm.msgErr = MSG_MANC_ERR;
-        ESP_LOGE( TAG, "raw[%d]=%02x",rxFrm.nBytes-1, b );
+        ESP_LOGE( TAG, "raw[%d]=%02x (MC)",rxFrm.nBytes-1, b );
       } else {
         rxFrm.msgByte <<= 4;
         rxFrm.msgByte |= manchester_decode( b );
@@ -202,9 +201,11 @@ void frame_rx_byte( uint8_t b )
 
         if( !rxFrm.count ) {
           rxFrm.msgErr = msg_rx_byte( rxFrm.msgByte );
-          if( rxFrm.msgErr != MSG_OK )
+          if( rxFrm.msgErr != MSG_OK ) {
+            ESP_LOGE( TAG, "raw[%d]=%02x (MSG)",rxFrm.nBytes-1, b );
             rxFrm.state = FRM_RX_ABORT;
         }
+      }
       }
 
       // Protect raw data buffer
@@ -217,20 +218,21 @@ void frame_rx_byte( uint8_t b )
 
   case FRM_RX_DONE:
   case FRM_RX_ABORT:
-    DEBUG_FRAME(0);
     break;
   }
 }
 
 static void frame_rx_done(void) {
-  DEBUG_FRAME(1);
-
   // Reset rxFrm as quickly as possible after collision can pick up new frame header
   uint8_t nBytes = rxFrm.nBytes;
   uint8_t msgErr = rxFrm.msgErr;
   uint8_t rssi;
 
+  DEBUG_FRAME(0);
+
   frame_rx_reset();
+
+  DEBUG_FRAME(1);
 
   // Now tell message about the end of frame
   rssi = cc_read_rssi();
@@ -368,7 +370,6 @@ static void frame_tx_done(void) {
 */
 
 static void frame_rx_enable(void) {
-  uart_disable();
   cc_enter_rx_mode();
 
   frame.state = FRM_RX;
@@ -417,6 +418,7 @@ void frame_init(void) {
 
 void frame_work(void) {
   uart_work();
+
   switch( frame.state ) {
   case FRM_IDLE:
     if( rxFrm.state==FRM_RX_OFF ) {
