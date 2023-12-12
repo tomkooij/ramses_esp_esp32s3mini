@@ -97,12 +97,12 @@ static bool spi_read_byte(uint8_t* Datain, uint8_t* Dataout, size_t DataLength )
 #define cc_deassert()  gpio_set_level( CONFIG_CC_CSN_GPIO, HIGH )
 
 static uint8_t cc_read( uint8_t addr ) {
-  uint8_t out = addr | CC_READ;
-  uint8_t data ;
+  uint8_t out[2] = { addr | CC_READ, 0 };
+  uint8_t data[2] ;
 
-  spi_read_byte( &data, &out, 1 );
+  spi_read_byte( data, &out, 2 );
 
-  return data;
+  return data[1];
 }
 
 static uint8_t cc_write( uint8_t addr, uint8_t b ) {
