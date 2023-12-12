@@ -31,7 +31,7 @@ static const char * TAG = "FRM";
 #include "message.h"
 
 #include "esp_debug.h"
-#define DEBUG_FRAME(_i)   do{if(_i)DEBUG1_ON;else DEBUG1_OFF;}while(0)
+#define DEBUG_FRAME(_i)   //do{if(_i)DEBUG1_ON;else DEBUG1_OFF;}while(0)
 
 /***********************************************************************************
 ** Frame state machine
@@ -229,10 +229,12 @@ static void frame_rx_done(void) {
   uint8_t rssi;
 
   DEBUG_FRAME(0);
+  led_off(LED_RX);
 
   frame_rx_reset();
 
   DEBUG_FRAME(1);
+  led_on(LED_RX);
 
   // Now tell message about the end of frame
   rssi = cc_read_rssi();
@@ -243,10 +245,204 @@ static void frame_rx_done(void) {
   led_off(LED_RX);
 }
 
+/***************************************************************************
+****************************************************************************
+** TX HW interface - cc1101 FIFO
+****************************************************************************
+****************************************************************************/
+
+/*****************************************************************
+* NOTE: The following shift_register structure is sensitive to
+*       the endianness used by the MCU.  It may be necessary to
+*       swap the order of .bits and .data
+*
+* The desired behaviour is that when .reg is left shifted the
+* msb of .bits becomes the lsb of .data
+*/
+static union shift_register {
+  uint16_t reg;
+  struct {
+#if __BYTE_ORDER__ ==__ORDER_LITTLE_ENDIAN__
+    uint8_t bits;
+    uint8_t data;
+#endif
+#if __BYTE_ORDER__ ==__ORDER_BIG_ENDIAN__
+    uint8_t data;
+    uint8_t bits;
+#endif
+  };
+} tx;
+static uint8_t txBits;   // Number of valid bits in shift register
+
+static uint8_t swap4( uint8_t in ) {
+  static uint8_t out[16] = {
+    0x0, 0x8, 0x4, 0xC, 0x2, 0xA, 0x6, 0xE,
+	0x1, 0x9, 0x5, 0xD, 0x3, 0xB, 0x7, 0xF
+  };
+
+  return out[ in & 0xF ];
+}
+
+static uint8_t swap8( uint8_t in ) {
+  uint8_t out;
+
+  out  = swap4( in ) << 4;
+  out |= swap4( in>>4 );
+
+  return out;
+}
+
+static uint8_t tx_data(void) {
+   return cc_write_fifo( tx.data );
+}
+
+static inline void insert_p(void)  { tx.data <<= 1 ; tx.data |= 0x01; }
+static inline void insert_s(void)  { tx.data <<= 1 ; }
+static inline void insert_ps(void) { insert_p(); insert_s(); }
+static inline void send( uint8_t n ) { tx.reg <<= n ; }
+
+static uint8_t tx_byte( uint8_t byte ) { // convert byte to octets
+  uint8_t space = 15;
+
+  tx.bits = swap8(byte);
+
+  // For each 4 bytes of data we send 5 octets of bitstream
+  // so there is one case which generates two octets
+  switch( txBits )
+  {
+  case 0: insert_ps(); send(6); space = tx_data(); send(2); txBits=2; break;
+  case 2: insert_ps(); send(4); space = tx_data(); send(4); txBits=4; break;
+  case 4: insert_ps(); send(2); space = tx_data(); send(6); // Fall through
+  case 6: insert_ps();          space = tx_data();          txBits=8; break;
+  case 8:              send(8); space = tx_data();          txBits=0; break;
+  }
+
+  return space;
+}
+
+static void tx_flush( void ) {
+  // flush outstanding bits
+  if( txBits ) {
+    send(8-txBits);
+    tx_data();
+  }
+
+  // Leave in SPACE condition
+  tx.data = 0xFF;
+  tx_data();
+}
+
+//-----------------------------------------------------------------
+// TX FIFO
+
+static QueueHandle_t tx_isr_queue;
+
+static enum tx_fifo_state {
+  TX_FIFO_FILL,
+  TX_FIFO_WAIT
+} tx_state;
+
+static void tx_fifo_stop(void) {
+  gpio_isr_handler_remove( CONFIG_CC_GDO0_GPIO );
+  xQueueReset( tx_isr_queue );
+}
+
+static void tx_fifo_wait(void) {
+  uint8_t data;
+  tx_fifo_stop();
+  frame_tx_byte( &data );
+}
+
+static uint8_t tx_fifo_send_block(void) {
+  uint8_t done;
+
+  uint8_t count;
+  uint8_t block = 4;
+
+  do {
+    uint8_t data;
+    done = frame_tx_byte( &data );
+    count = tx_byte( data );
+    block--;
+  } while( block && !done && count>4 );
+
+  return done;
+}
+
+static void tx_fifo_prime( void ) {
+  // Not clear why but have to send a zero byte to start TX correctly
+  cc_write_fifo( 0x00 );
+
+  // Now send a BREAK condition
+  cc_write_fifo( 0xFF );
+  cc_write_fifo( 0x00 );
+  cc_write_fifo( 0x00 );
+
+  // So we can see an interrupt when it falls below threshold
+  // send sufficient data to fill FIFO above threshold
+  txBits = 0;
+  while( !gpio_get_level( CONFIG_CC_GDO0_GPIO ) )
+    tx_fifo_send_block();
+}
+
+static void tx_fifo_fill(void) {
+  uint8_t done = tx_fifo_send_block();
+
+  if( done ) {
+    tx_flush();
+    cc_fifo_end();
+    tx_state = TX_FIFO_WAIT;
+
+    // Switch to rising edge to detect FIFO empty
+    gpio_set_intr_type( CONFIG_CC_GDO0_GPIO, GPIO_INTR_POSEDGE );
+   }
+}
+
+//---------------------------------------------------------------------------------
+
+static void IRAM_ATTR GDO0_ISR(void *args) {
+  gpio_intr_disable( CONFIG_CC_GDO0_GPIO );
+  xQueueSendFromISR( tx_isr_queue, NULL, NULL );
+}
+
+static void tx_fifo_init(void) {
+  gpio_reset_pin( CONFIG_CC_GDO0_GPIO );	// Disconnect GDO0 from UART TX
+  gpio_set_direction( CONFIG_CC_GDO0_GPIO, GPIO_MODE_INPUT );
+  gpio_pulldown_en( CONFIG_CC_GDO0_GPIO );
+  gpio_pullup_dis( CONFIG_CC_GDO0_GPIO );
+
+  tx_isr_queue = xQueueCreate( 32, 0 );
+  gpio_install_isr_service(0);
+}
+
+static void tx_fifo_start(void) {
+  // Falling edge for FIFO low
+  gpio_set_intr_type( CONFIG_CC_GDO0_GPIO, GPIO_INTR_NEGEDGE );
+
+  tx_fifo_prime();
+  tx_state = TX_FIFO_FILL;
+
+  gpio_isr_handler_add( CONFIG_CC_GDO0_GPIO, GDO0_ISR,  NULL );
+}
+
+static void tx_fifo_work(void) {
+  if( xQueueReceive( tx_isr_queue, NULL, 0 )){
+    DEBUG_FRAME(0);
+    led_off(LED_TX);
+    switch(tx_state) {
+      case TX_FIFO_FILL:  tx_fifo_fill();  break;
+      case TX_FIFO_WAIT:  tx_fifo_wait();  break;
+    }
+    gpio_intr_enable( CONFIG_CC_GDO0_GPIO );
+    DEBUG_FRAME(1);
+    led_on(LED_TX);
+  }
+}
+
 /***********************************************************************************
 ** TX FRAME processing
 **
-** We must provide the following to the uart
+** We must provide the following data to the HW
 **   <prefix><message><suffix>
 **
 **   <prefix>  = <preamble><sync word><header>
@@ -280,7 +476,6 @@ static void frame_tx_reset(void) {
   memset( &txFrm, 0, sizeof(txFrm) );
 }
 
-#if 0
 static uint8_t tx_prefix[] = {
   0x55, 0x55, 0x55, 0x55, 0x55,   // Pre-amble
   0xFF, 0x00,                     // Sync Word
@@ -358,10 +553,9 @@ uint8_t frame_tx_byte(uint8_t *byte) {
 
   return done;
 }
-#endif
 
 static void frame_tx_done(void) {
-//  msg_tx_done();
+  msg_tx_done();
   frame_tx_reset();
 }
 
@@ -385,7 +579,7 @@ static void frame_tx_enable(void) {
   frame.state = FRM_TX;
   txFrm.state = FRM_TX_IDLE;
 
-//  uart_tx_enable();
+  tx_fifo_start();
 }
 
 void frame_disable(void) {
@@ -411,6 +605,7 @@ void frame_init(void) {
 
   cc_init();
   uart_init();
+  tx_fifo_init();
 
   frame.state = FRM_IDLE;
 }
@@ -445,6 +640,8 @@ void frame_work(void) {
       led_off(LED_TX);
       frame_tx_done();
       frame_rx_enable();
+    } else {
+      tx_fifo_work();
     }
     break;
   }

@@ -73,6 +73,7 @@ static void uart_rx_flush(void) {
 
 static void rx_start(void) {
   uart_flush_input(uart_num);
+  uart_enable_rx_intr(uart_num);
   uart_rx_on = true;
 }
 
@@ -108,14 +109,12 @@ static void uart_work_rx(void) {
 */
 
 static void tx_start(void) {
-//  uart_enable_tx_intr(uart_num);
   uart_rx_flush();
 }
 
 //---------------------------------------------------------------------------------
 
 static void tx_stop(void) {
-//  uart_disable_tx_intr(uart_num);
 }
 
 //---------------------------------------------------------------------------------
@@ -173,8 +172,8 @@ void uart_init(void)
   };
 
   static uart_intr_config_t const uintr_cfg = {
-    .intr_enable_mask = UART_INTR_RXFIFO_FULL , //| UART_BREAK | UART_FIFO_OVF | UART_FRAME_ERR, // | UART_BUFFER_FULL ,          /*!< UART FIFO overflow event*/
-    .rxfifo_full_thresh = 1,
+    .intr_enable_mask = UART_INTR_RXFIFO_FULL ,
+	.rxfifo_full_thresh = 1,
   };
 
   esp_log_level_set(TAG, CONFIG_UART_LOG_LEVEL );

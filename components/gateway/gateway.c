@@ -21,6 +21,12 @@ static const char *TAG = "GATEWAY";
 #include "esp_console.h"
 #include "gateway.h"
 
+#define GWAY_CLASS 18
+#define GWAY_ID 730
+
+static uint8_t  MyClass = GWAY_CLASS;
+static uint32_t MyId = GWAY_ID;
+
 struct gateway_data {
   BaseType_t coreID;
   TaskHandle_t   task;
@@ -110,13 +116,36 @@ void gateway_radio_rx( struct message **message ) {
 /*************************************************************************
  * TX messages
  */
+
+static void tx_msg( char const *cmd ){
+  struct message *tx = msg_alloc();
+  if( tx ) {
+	uint8_t err = 0, done=0;
+	while( !err && *cmd != '\0' )
+	  err = msg_scan( tx, *(cmd++) );
+
+	if( !err )
+	  done = msg_scan( tx, '\r' );
+
+	if( done && msg_isValid( tx ) ) {
+      msg_change_addr( tx,0, GWAY_CLASS,GWAY_ID , MyClass,MyId );
+      msg_tx_ready( &tx );
+//    } else if( TRACE(TRC_TXERR) ) {
+//      msg_rx_ready( &tx );
+    } else {
+      msg_free( &tx );
+    }
+  }
+}
+
 static int gateway_radio_tx(int argc, char **argv) {
   if( argc==8 ) {
-	char cmd[256];
-    sprintf( cmd, "%s %s %s %s %s %s %s %s",
+	char msg[256];
+    sprintf( msg, "%s %s %s %s %s %s %s %s",
     		argv[0],argv[1],argv[2],argv[3],argv[4],argv[5],argv[6],argv[7]);
 
-	ESP_LOGI( TAG, "%s",  cmd );
+	ESP_LOGI( TAG, "%s",  msg );
+    tx_msg( msg );
   } else {
 	ESP_LOGI(TAG, "discarded %s + %d parameters",argv[0],argc-1);
   }
@@ -143,7 +172,7 @@ static void gateway_register_tx(void) {
         .func = &gateway_radio_tx,
     };
     const esp_console_cmd_t rp = {
-        .command = "I",
+        .command = "RP",
         .help = "Send RP message",
         .hint = NULL,
         .func = &gateway_radio_tx,

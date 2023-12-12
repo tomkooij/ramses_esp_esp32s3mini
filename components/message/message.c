@@ -19,6 +19,7 @@ static const char * TAG = "MSG";
 
 #include "gateway.h"
 #include "message.h"
+#include "frame.h"
 
 #define TRACE(_t)     ( 0 )
 #define DEBUG_MSG(_i) do{}while(0)
@@ -353,7 +354,7 @@ static uint8_t msg_print_payload( char *str, uint8_t payload ) {
   return n;
 }
 
-static char const * const msg_error_str( uint8_t error )
+static char const *msg_error_str( uint8_t error )
 {
   static char const msg_err_OK[] = "OK" ;
   static char const msg_err_UNKNOWN[] = "UNKNOWN" ;
@@ -729,7 +730,7 @@ void msg_rx_end( uint8_t nBytes, uint8_t error ) {
   DEBUG_MSG(0);
 }
 
-#if 0
+#if 1
 /********************************************************
 ** TX Message scan
 ********************************************************/
@@ -1145,7 +1146,7 @@ uint8_t msg_isTx( struct message *msg ) {
 **/
 
 void msg_work(void) {
-#if 0
+#if 1
  if( !TxMsg ) {
     struct message *tx1 = msg_tx_get();
     if( tx1 )
