@@ -1,9 +1,5 @@
 menu "CC1101 Configuration"
 
-	config CC_GPIO_RANGE_MAX
-		int
-		default 48 if IDF_TARGET_ESP32S3
-
     config CC_LOG_LEVEL
         int "CC LOG LEVEL"
         range 0	5
@@ -17,6 +13,10 @@ menu "CC1101 Configuration"
         	4=Debug
         	5=Verbose
         	
+	config CC_GPIO_RANGE_MAX
+		int
+		default 48 if IDF_TARGET_ESP32S3
+
 	config CC_MOSI_GPIO
 		int "CC1101 MOSI GPIO"
 		range 0 CC_GPIO_RANGE_MAX

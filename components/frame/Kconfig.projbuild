@@ -3,7 +3,7 @@ menu "Frame Configuration"
     config FRM_LOG_LEVEL
         int "Frame LOG LEVEL"
         range 0	5
-        default 3
+        default 2
         help
         	Set LOG Level for FRAME module
         	0=None
@@ -16,7 +16,7 @@ menu "Frame Configuration"
     config UART_LOG_LEVEL
         int "UART LOG LEVEL"
         range 0	5
-        default 3
+        default 2
         help
         	Set LOG Level for UART module
         	0=None

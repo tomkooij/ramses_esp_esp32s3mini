@@ -192,6 +192,8 @@ void gateway_init( BaseType_t coreID ) {
   struct gateway_data *ctxt = gateway_ctxt();
   ctxt->coreID = coreID;
 
+  esp_log_level_set(TAG, CONFIG_GWAY_LOG_LEVEL );
+
   gateway_register_tx();
 
   xTaskCreatePinnedToCore( Gateway, "Gateway", 4096, ctxt, 10, &ctxt->task, ctxt->coreID );
