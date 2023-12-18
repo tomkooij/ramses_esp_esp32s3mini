@@ -100,7 +100,7 @@ static uint8_t cc_read( uint8_t addr ) {
   uint8_t out[2] = { addr | CC_READ, 0 };
   uint8_t data[2] ;
 
-  spi_read_byte( data, &out, 2 );
+  spi_read_byte( data, out, 2 );
 
   return data[1];
 }
