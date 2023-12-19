@@ -6,5 +6,5 @@ idf_component_register(
     INCLUDE_DIRS
     PRIV_INCLUDE_DIRS
     REQUIRES 
-    PRIV_REQUIRES console driver led cc1101 frame message gateway esp_debug
+    PRIV_REQUIRES console driver nvs_flash led wifi cc1101 frame message gateway esp_debug
 )
