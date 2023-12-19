@@ -14,5 +14,11 @@ menu "RAMSES_ESP configuration"
         default 1
         help
             The Host task will run on this core.
-            
+
+    config FUNCTION_PIN
+    int "Function Button GPIO pin"
+      range 0 41
+      default 0
+      help
+          GPIO pin number of Function Button          
 endmenu
