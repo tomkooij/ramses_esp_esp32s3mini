@@ -108,8 +108,8 @@ static struct wifi_data *wifi_ctxt( void ) {
     .state = WIFI_IDLE,
     .station_config = {
       .sta = {
-        .ssid = "",//CONFIG_WIFI_SSID,
-        .password = "",//CONFIG_WIFI_PASSWORD,
+        .ssid = CONFIG_WIFI_SSID,
+        .password = CONFIG_WIFI_PASSWORD,
         /* Authmode threshold resets to WPA2 as default if password matches WPA2 standards (pasword len => 8).
          * If you want to connect the device to deprecated WEP/WPA networks, Please set the threshold value
          * to WIFI_AUTH_WEP/WIFI_AUTH_WPA_PSK and set the password with length and format matching to
@@ -307,6 +307,7 @@ static void wifi_state_machine( struct wifi_data *ctxt ) {
 
   case WIFI_FAILED:
 	if( ctxt->restart ) {
+      esp_wifi_stop();
 	  ctxt->restart = false;
 	  ctxt->state = WIFI_CREATED;
 	}
