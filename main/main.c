@@ -15,6 +15,7 @@
  */
 #include <stdio.h>
 #include "esp_system.h"
+#include "esp_app_desc.h"
 #include "driver/gpio.h"
 
 #include "freertos/FreeRTOS.h"
@@ -31,6 +32,9 @@
 
 void app_main(void)
 {
+  const esp_app_desc_t *app = esp_app_get_description();
+  printf("# %s %s\n",app->project_name, app->version );
+
   esp_debug_init();
   led_init();
 
