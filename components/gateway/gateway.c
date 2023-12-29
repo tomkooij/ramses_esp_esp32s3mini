@@ -19,6 +19,7 @@ static const char *TAG = "GATEWAY";
 #include "freertos/queue.h"
 
 #include "esp_console.h"
+#include "device.h"
 #include "gateway.h"
 
 #define GWAY_CLASS 18
@@ -69,6 +70,8 @@ static void Gateway( void *param ) {
 
   ESP_LOGI( TAG, "Task Started");
 
+  device_init( MyClass );
+  device_get_id( &MyClass, &MyId );
   ctxt->queue = xQueueCreate( 10, sizeof( struct gateway_msg ) );
 
   do {
