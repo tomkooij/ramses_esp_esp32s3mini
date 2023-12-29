@@ -240,6 +240,7 @@ static void wifi_check_station( struct wifi_data *ctxt ) {
   union wifi_msg_param param;
 
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+  cfg.wifi_task_core_id = ctxt->coreID;
   ESP_ERROR_CHECK( esp_wifi_init(&cfg) );
 
   ESP_ERROR_CHECK( esp_wifi_get_config(ESP_IF_WIFI_STA, &config ) );
