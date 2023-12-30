@@ -15,7 +15,7 @@ static uint32_t DevId;
 
 void device_init( uint8_t class ) {
   uint8_t mac[6];
-  esp_base_mac_addr_get( &mac );
+  esp_base_mac_addr_get( mac );
 
   DevClass = class;
   DevId = (  ( (uint32_t)mac[3] << 16 )
