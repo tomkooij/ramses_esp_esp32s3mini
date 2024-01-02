@@ -1,0 +1,16 @@
+menu "NVS Configuration"
+
+    config NVS_LOG_LEVEL
+        int "NVS LOG LEVEL"
+        range 0	5
+        default 2
+        help
+        	Set LOG Level for NVS Management
+        	0=None
+        	1=Error
+        	2=Warn
+        	3=Info
+        	4=Debug
+        	5=Verbose
+
+endmenu
