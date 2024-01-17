@@ -134,6 +134,14 @@ static struct wifi_data *wifi_ctxt( void ) {
 }
 
 /********************************************************************
+ * utilities
+ */
+bool wifi_is_connected(void) {
+  struct wifi_data *ctxt = wifi_ctxt();
+  return( ctxt && ctxt->state==WIFI_CONNECTED );
+}
+
+/********************************************************************
  * Task events
  */
 #define SSID_LEN     32
