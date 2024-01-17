@@ -19,6 +19,7 @@ static const char *TAG = "HOST";
 #include "esp_system.h"
 #include "esp_console.h"
 
+#include "ramses-mqtt.h"
 #include "gateway.h"
 #include "host.h"
 
@@ -76,6 +77,7 @@ static void Host_Task( void *param )
 
   // Basic console initialisation
   console_init();
+  ramses_mqtt_init( ctxt->coreID );
 
   gateway_init( ctxt->coreID );
 
