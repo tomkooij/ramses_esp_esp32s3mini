@@ -12,6 +12,7 @@
 
 static uint8_t  DevClass;
 static uint32_t DevId;
+static char     Dev[12];
 
 void device_init( uint8_t class ) {
   uint8_t mac[6];
@@ -29,3 +30,9 @@ void device_get_id( uint8_t *class, uint32_t *id ) {
   if( id    ) *id    = DevId;
 }
 
+char const *device(void) {
+  if( Dev[0]=='\0' && DevClass!=0 )
+    sprintf( Dev, "%02d:%06ld",DevClass,DevId );
+
+  return Dev;
+}

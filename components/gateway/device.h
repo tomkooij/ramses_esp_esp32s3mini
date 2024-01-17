@@ -10,5 +10,6 @@
 
 extern void device_init( uint8_t  class );
 extern void device_get_id( uint8_t *class, uint32_t *id );
+extern char const *device(void);
 
 #endif // _DEVICE_H_
