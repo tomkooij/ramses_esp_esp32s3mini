@@ -19,7 +19,6 @@ static const char *TAG = "WIFI";
 #include "esp_wifi.h"
 #include "esp_event.h"
 
-#include "ota.h"
 #include "wifi.h"
 #include "wifi_cmd.h"
 
@@ -366,7 +365,6 @@ WIFI_HNDL wifi_init( BaseType_t coreID ) {
   esp_log_level_set(TAG, CONFIG_WIFI_LOG_LEVEL );
 
   wifi_register();
-  ota_init( coreID );
 
   xTaskCreatePinnedToCore( Wifi, "WiFi", 4096, ctxt, 10, &ctxt->task, ctxt->coreID );
 

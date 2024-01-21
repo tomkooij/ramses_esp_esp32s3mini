@@ -10,6 +10,8 @@
 #ifndef _WIFI_H_
 #define _WIFI_H_
 
+#include "freertos/FreeRTOS.h"
+
 typedef void * WIFI_HNDL;
 
 extern void wifi_set_ssid( char *ssid );

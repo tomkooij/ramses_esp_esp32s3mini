@@ -24,7 +24,7 @@
 #include "esp_debug.h"
 #include "led.h"
 #include "params.h"
-#include "wifi.h"
+#include "network.h"
 
 #include "radio.h"
 #include "host.h"
@@ -38,7 +38,7 @@ void app_main(void)
   led_init();
   nvs_start();
   params_init();
-  wifi_init( CONFIG_HOST_CORE );
+  network_init( CONFIG_HOST_CORE );
 
   Radio_init( CONFIG_RADIO_CORE );
   Host_init( CONFIG_HOST_CORE );
