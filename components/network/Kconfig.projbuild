@@ -1,4 +1,4 @@
-menu "WiFi Configuration"
+menu "Network Configuration"
 
     config WIFI_LOG_LEVEL
         int "WiFi LOG LEVEL"
