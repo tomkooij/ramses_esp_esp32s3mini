@@ -20,6 +20,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "esp_event.h"
 
 #include "esp_debug.h"
 #include "led.h"
@@ -33,6 +34,8 @@ void app_main(void)
 {
   const esp_app_desc_t *app = esp_app_get_description();
   printf("# %s %s\n",app->project_name, app->version );
+
+  ESP_ERROR_CHECK( esp_event_loop_create_default() );
 
   esp_debug_init();
   led_init();

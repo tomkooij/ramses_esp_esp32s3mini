@@ -265,9 +265,6 @@ static void wifi_check_station( struct wifi_data *ctxt ) {
 
 static void wifi_create( struct wifi_data *ctxt ) {
   ctxt->event_group = xEventGroupCreate();
-  ESP_ERROR_CHECK( esp_netif_init() );
-
-  ESP_ERROR_CHECK( esp_event_loop_create_default() );
   esp_netif_create_default_wifi_sta();
 
   ESP_ERROR_CHECK( esp_event_handler_instance_register(WIFI_EVENT,ESP_EVENT_ANY_ID,  &wifi_event_handler,ctxt, &ctxt->any_id) );
