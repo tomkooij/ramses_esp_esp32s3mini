@@ -15,6 +15,7 @@ static const char *TAG = "MQTT";
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_event.h"
+#include "esp_app_desc.h"
 
 #include "mqtt_client.h"
 
@@ -64,6 +65,8 @@ struct mqtt_data {
 
   esp_mqtt_client_config_t cfg;
   esp_mqtt_client_handle_t client;
+
+  uint8_t info;
 };
 
 static struct mqtt_data *mqtt_ctxt( void ) {
@@ -84,6 +87,7 @@ static struct mqtt_data *mqtt_ctxt( void ) {
 		.keepalive=20,
       },
     },
+	.info = 0,
   };
 
   static struct mqtt_data *ctxt = NULL;
@@ -113,6 +117,44 @@ static void mqtt_set_state( struct mqtt_data *ctxt, enum mqtt_state newState ) {
       ESP_LOGI( TAG, "state %s->%s ", mqtt_state_text(ctxt->state), mqtt_state_text(newState) );
       ctxt->state = newState;
     }
+  }
+}
+
+/****************************************************
+ * Information topics
+ */
+
+typedef void (*info_field)( struct mqtt_data *ctxt, char *topic );
+
+enum info_topic {
+  INFO_FW,
+  INFO_VER,
+  // last
+  INFO_MAX
+};
+
+static void publish_firmware( struct mqtt_data *ctxt, char *topic ) {
+  const esp_app_desc_t *app = esp_app_get_description();
+  strcat( topic, "/firmware" );
+  esp_mqtt_client_publish( ctxt->client,topic, app->project_name, 0, 1, 1);
+}
+
+static void publish_version( struct mqtt_data *ctxt, char *topic ) {
+  const esp_app_desc_t *app = esp_app_get_description();
+  strcat( topic, "/version" );
+  esp_mqtt_client_publish( ctxt->client,topic, app->version, 0, 1, 1);
+}
+
+static void mqtt_publish_info( struct mqtt_data *ctxt ) {
+  static info_field const publish[INFO_MAX] = {
+    [INFO_FW]  = publish_firmware,
+	[INFO_VER] = publish_version,
+  };
+  if( ctxt->info < INFO_MAX ) {
+    char topic[64];
+    sprintf( topic, "%s/info", ctxt->topic );
+    publish[ctxt->info]( ctxt, topic );
+    ctxt->info++;
   }
 }
 
@@ -200,12 +242,13 @@ static void mqtt_state_machine( struct mqtt_data *ctxt ) {
 	break;
 
   case MQTT_CONNECTED:
-    int msg_id = esp_mqtt_client_publish( ctxt->client, ctxt->topic, "online", 0, 1, 1);
-    ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
+    esp_mqtt_client_publish( ctxt->client, ctxt->topic, "online", 0, 1, 1);
     mqtt_set_state( ctxt,MQTT_ACTIVE );
     break;
 
   case MQTT_ACTIVE:
+    if( ctxt->info<INFO_MAX )
+      mqtt_publish_info( ctxt );
     break;
 
   default:
