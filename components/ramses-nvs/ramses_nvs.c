@@ -1,11 +1,11 @@
-/*
+/********************************************************************
  * ramses_esp
- * params.c
+ * ramses_nvs.c
  *
- *  Created on: 2 Jan 2024
- *    Author: Peter Price
+ * (C) 2023 Peter Price
  *
- *  NVS Management
+ * NVS Management
+ *
  */
 #include <string.h>
 
@@ -17,7 +17,7 @@ static const char * TAG = "NVS";
 
 #include "nvs_flash.h"
 
-#include "params.h"
+#include "ramses_nvs.h"
 
 /*********************************************************
  * Helper Functions
@@ -167,7 +167,7 @@ int nvs_reset(void) {
   return nvs_flash_init();
 }
 
-void nvs_start(void) {
+static void nvs_start(void) {
   esp_err_t ret = nvs_flash_init();
   if( ret==ESP_ERR_NVS_NO_FREE_PAGES || ret==ESP_ERR_NVS_NEW_VERSION_FOUND )
 	ret = nvs_reset();
@@ -175,8 +175,9 @@ void nvs_start(void) {
   ESP_ERROR_CHECK(ret);
 }
 
-void params_init(void) {
+void ramses_nvs_init(void) {
   esp_log_level_set(TAG, CONFIG_NVS_LOG_LEVEL );
 
+  nvs_start();
   nvs_register();
 }

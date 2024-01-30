@@ -1,5 +1,5 @@
 idf_component_register(
-  SRCS "params.c"
+  SRCS "ramses_nvs.c"
   INCLUDE_DIRS "."
   PRIV_REQUIRES console nvs_flash
 )

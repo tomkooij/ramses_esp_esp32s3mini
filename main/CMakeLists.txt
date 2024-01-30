@@ -5,6 +5,6 @@ idf_component_register(
     SRCS main.c radio.c host.c
     INCLUDE_DIRS
     PRIV_INCLUDE_DIRS
-    REQUIRES driver esp_app_format esp_event
-    PRIV_REQUIRES console ramses-mqtt ramses-led params ramses-network cc1101 frame message gateway esp_debug
+    REQUIRES driver esp_app_format esp_event console 
+    PRIV_REQUIRES ramses-mqtt ramses-led ramses-nvs ramses-network cc1101 frame message gateway esp_debug
 )
