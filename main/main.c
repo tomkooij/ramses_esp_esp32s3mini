@@ -22,12 +22,11 @@
 #include "freertos/task.h"
 #include "esp_event.h"
 
-#include "esp_debug.h"
+#include "ramses_debug.h"
 #include "ramses_led.h"
 #include "ramses_nvs.h"
 #include "ramses_network.h"
 
-#include "../components/ramses-nvs/ramses_nvs.h"
 #include "radio.h"
 #include "host.h"
 
@@ -38,7 +37,7 @@ void app_main(void)
 
   ESP_ERROR_CHECK( esp_event_loop_create_default() );
 
-  esp_debug_init();
+  ramses_debug_init();
   ramses_led_init();
   ramses_nvs_init();
   ramses_network_init( CONFIG_HOST_CORE );

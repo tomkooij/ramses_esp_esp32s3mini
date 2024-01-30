@@ -6,5 +6,5 @@ idf_component_register(
     INCLUDE_DIRS
     PRIV_INCLUDE_DIRS
     REQUIRES driver esp_app_format esp_event console 
-    PRIV_REQUIRES ramses-mqtt ramses-led ramses-nvs ramses-network cc1101 frame message gateway esp_debug
+    PRIV_REQUIRES ramses-debug ramses-led ramses-nvs ramses-network ramses-mqtt cc1101 frame message gateway 
 )

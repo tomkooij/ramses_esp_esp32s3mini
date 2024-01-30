@@ -1,6 +1,6 @@
 idf_component_register(
-  SRCS "esp_debug.c"
-  PRIV_REQUIRES driver
+  SRCS "ramses_debug.c"
   INCLUDE_DIRS "."
+  REQUIRES driver
 )
 

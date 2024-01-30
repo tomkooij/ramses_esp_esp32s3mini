@@ -23,7 +23,7 @@ static const char * TAG = "UART";
 #include "uart.h"
 #include "frame.h"
 
-#include "esp_debug.h"
+#include "ramses_debug.h"
 #define DEBUG_UART(_i)    do{if(_i)DEBUG2_ON;else DEBUG2_OFF;}while(0)
 #define DEBUG_DATA(_i)    do{if(_i)DEBUG3_ON;else DEBUG3_OFF;}while(0)
 

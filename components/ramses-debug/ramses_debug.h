@@ -1,14 +1,14 @@
 /********************************************************************
  * ramses_esp
- * esp_debug.h
+ * ramses_debug.h
  *
  * (C) 2023 Peter Price
  *
  * Simple GPIO debug
  */
 
-#ifndef COMPONENTS_ESP_DEBUG_A_ESP_DEBUG_H_
-#define COMPONENTS_ESP_DEBUG_A_ESP_DEBUG_H_
+#ifndef _RAMSES_DEBUG_H_
+#define _RAMSES_DEBUG_H_
 
 #include "sdkconfig.h"
 #include "driver/gpio.h"
@@ -79,6 +79,6 @@
 
 #define DEBUG_MASK ( DEBUG1 | DEBUG2 | DEBUG3 | DEBUG4 | DEBUG5 | DEBUG6 )
 
-extern void esp_debug_init(void);
+extern void ramses_debug_init(void);
 
-#endif /* COMPONENTS_ESP_DEBUG_A_ESP_DEBUG_H_ */
+#endif // _RAMSES_DEBUG_H_
