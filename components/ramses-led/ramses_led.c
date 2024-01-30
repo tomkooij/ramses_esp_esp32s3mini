@@ -1,15 +1,18 @@
-/*
+/********************************************************************
  * ramses_esp
- * led.c
+ * ramses_led.c
  *
- *  Created on: 29 Nov 2023
- *      Author: peter
+ * (C) 2023 Peter Price
+ *
+ * LED control
+ *
  */
+#include "ramses_led.h"
+
 #include <stdio.h>
 
 #include "driver/gpio.h"
 
-#include "led.h"
 
 #define GPIO_PIN_SEL(_p)  ( 1ULL<<(_p) )
 
@@ -20,7 +23,7 @@ static const struct led_map {
   { CONFIG_GPIO_TX_LED },   // TX
 };
 
-void led_init(void) {
+void ramses_led_init(void) {
   gpio_config_t io_conf = {
     .intr_type = GPIO_INTR_DISABLE,
     .mode = GPIO_MODE_OUTPUT,
@@ -46,4 +49,3 @@ void led_off( enum LED_ID led ) {
  if( led<LED_MAX )
    gpio_set_level( map[led].gpio, 0 );
 }
-

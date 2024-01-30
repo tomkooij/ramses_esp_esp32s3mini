@@ -1,0 +1,15 @@
+menu "LED Configuration"
+
+	config GPIO_RX_LED
+		int "RX LED GPIO"
+		default 42
+        help
+        	GPIOx for RX LED
+
+	config GPIO_TX_LED
+		int "TX LED GPIO"
+		default 41
+        help
+        	GPIOx for TX LED
+  		
+endmenu

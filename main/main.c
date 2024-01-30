@@ -23,7 +23,7 @@
 #include "esp_event.h"
 
 #include "esp_debug.h"
-#include "led.h"
+#include "ramses_led.h"
 #include "params.h"
 #include "network.h"
 
@@ -38,7 +38,7 @@ void app_main(void)
   ESP_ERROR_CHECK( esp_event_loop_create_default() );
 
   esp_debug_init();
-  led_init();
+  ramses_led_init();
   nvs_start();
   params_init();
   network_init( CONFIG_HOST_CORE );
