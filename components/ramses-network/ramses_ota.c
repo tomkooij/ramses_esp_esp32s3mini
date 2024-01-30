@@ -22,8 +22,8 @@ static const char *TAG = "OTA";
 #include "esp_crt_bundle.h"
 #include "esp_ota_ops.h"
 
-#include "ramses_ota.h"
 #include "ota_cmd.h"
+#include "ramses_ota.h"
 
 struct ota_data {
   BaseType_t coreID;

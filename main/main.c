@@ -25,7 +25,7 @@
 #include "esp_debug.h"
 #include "ramses_led.h"
 #include "params.h"
-#include "network.h"
+#include "ramses_network.h"
 
 #include "radio.h"
 #include "host.h"
@@ -41,7 +41,7 @@ void app_main(void)
   ramses_led_init();
   nvs_start();
   params_init();
-  network_init( CONFIG_HOST_CORE );
+  ramses_network_init( CONFIG_HOST_CORE );
 
   Radio_init( CONFIG_RADIO_CORE );
   Host_init( CONFIG_HOST_CORE );

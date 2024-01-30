@@ -7,7 +7,6 @@
  * WiFi Commands
  *
  */
-#include <ramses_wifi.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -16,6 +15,7 @@
 #include "esp_console.h"
 
 #include "wifi_cmd.h"
+#include "ramses_wifi.h"
 
 /*********************************************************
  * Helper Functions

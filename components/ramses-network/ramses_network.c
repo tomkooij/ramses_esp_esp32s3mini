@@ -1,6 +1,6 @@
 /********************************************************************
  * ramses_esp
- * network.c
+ * ramses_network.c
  *
  * (C) 2023 Peter Price
  *
@@ -26,7 +26,7 @@
 #define SNTP_SERVER "sntp_server"
 
 #include "network_cmd.h"
-#include "network.h"
+#include "ramses_network.h"
 
 /********************************************************************************
  * Network context
@@ -136,7 +136,7 @@ void NET_set_sntp_server( char *new_server ) {
 /********************************************************************************
  * Initialisation
  */
-void network_init( BaseType_t coreID ) {
+void ramses_network_init( BaseType_t coreID ) {
   struct network_data *ctxt = network_ctxt();
 
   network_register();

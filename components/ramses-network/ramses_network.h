@@ -1,18 +1,18 @@
 /********************************************************************
  * ramses_esp
- * network.h
+ * ramses_network.h
  *
  * (C) 2023 Peter Price
  *
  * Network
  *
  */
-#ifndef _NETWORK_H_
-#define _NETWORK_H_
+#ifndef _RAMSES_NETWORK_H_
+#define _RAMSES_NETWORK_H_
 
 extern void NET_set_mqtt_broker( char *new_server );
 extern void NET_set_sntp_server( char *new_server );
 
-extern void network_init( BaseType_t coreID );
+extern void ramses_network_init( BaseType_t coreID );
 
-#endif // _NETWORK_H_
+#endif // _RAMSES_NETWORK_H_

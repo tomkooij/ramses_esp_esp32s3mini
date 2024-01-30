@@ -19,8 +19,8 @@ static const char *TAG = "WIFI";
 #include "esp_wifi.h"
 #include "esp_event.h"
 
-#include "ramses_wifi.h"
 #include "wifi_cmd.h"
+#include "ramses_wifi.h"
 
 /* Map configuration to internal constants */
 #if CONFIG_WPA3_SAE_PWE_HUNT_AND_PECK

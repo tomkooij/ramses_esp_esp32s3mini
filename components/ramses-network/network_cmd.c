@@ -14,8 +14,9 @@
 
 #include "esp_console.h"
 
-#include "network.h"
 #include "network_cmd.h"
+
+#include "ramses_network.h"
 
 /*********************************************************
  * Helper Functions
