@@ -1,6 +1,6 @@
 /********************************************************************
  * ramses_esp
- * wifi.c
+ * ramses_wifi.c
  *
  * (C) 2023 Peter Price
  *
@@ -19,7 +19,7 @@ static const char *TAG = "WIFI";
 #include "esp_wifi.h"
 #include "esp_event.h"
 
-#include "wifi.h"
+#include "ramses_wifi.h"
 #include "wifi_cmd.h"
 
 /* Map configuration to internal constants */
@@ -355,7 +355,7 @@ static void Wifi( void *param ) {
   } while(1);
 }
 
-WIFI_HNDL wifi_init( BaseType_t coreID ) {
+WIFI_HNDL ramses_wifi_init( BaseType_t coreID ) {
   struct wifi_data *ctxt= wifi_ctxt();
   ctxt->coreID = coreID;
 

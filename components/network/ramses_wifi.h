@@ -1,14 +1,14 @@
 /********************************************************************
  * ramses_esp
- * wifi.h
+ * ramses_wifi.h
  *
  * (C) 2023 Peter Price
  *
  * WiFi Station
  *
  */
-#ifndef _WIFI_H_
-#define _WIFI_H_
+#ifndef _RAMSES_WIFI_H_
+#define _RAMSES_WIFI_H_
 
 #include "freertos/FreeRTOS.h"
 
@@ -21,6 +21,6 @@ extern void wifi_status( void );
 
 extern bool wifi_is_connected(void);
 
-extern WIFI_HNDL wifi_init( BaseType_t coreID );
+extern WIFI_HNDL ramses_wifi_init( BaseType_t coreID );
 
-#endif // _WIFI_H_
+#endif // _RAMSES_WIFI_H_

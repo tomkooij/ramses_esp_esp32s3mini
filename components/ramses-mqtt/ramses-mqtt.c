@@ -20,7 +20,7 @@ static const char *TAG = "MQTT";
 #include "mqtt_client.h"
 
 #include "device.h"
-#include "wifi.h"
+#include "ramses_wifi.h"
 #include "ramses-mqtt.h"
 
 /****************************************************

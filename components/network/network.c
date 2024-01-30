@@ -15,10 +15,10 @@
 #include "esp_err.h"
 #include "esp_netif.h"
 #include "nvs.h"
-#include "ramses_ota.h"
 
+#include "ramses_ota.h"
 #include "ramses_sntp.h"
-#include "wifi.h"
+#include "ramses_wifi.h"
 
 // NVS identifiers
 #define NETWORK_NAMESPACE "network"
@@ -151,5 +151,5 @@ void network_init( BaseType_t coreID ) {
 
   ramses_sntp_init( coreID, ctxt->sntp_server );
   ramses_ota_init( coreID );
-  wifi_init( coreID );
+  ramses_wifi_init( coreID );
 }

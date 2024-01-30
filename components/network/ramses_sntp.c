@@ -21,7 +21,7 @@ static const char *TAG = "SNTP";
 #include "esp_netif_sntp.h"
 #include "esp_sntp.h"
 
-#include "wifi.h"
+#include "ramses_wifi.h"
 #include "ramses_sntp.h"
 
 /****************************************************
