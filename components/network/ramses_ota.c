@@ -22,7 +22,7 @@ static const char *TAG = "OTA";
 #include "esp_crt_bundle.h"
 #include "esp_ota_ops.h"
 
-#include "ota.h"
+#include "ramses_ota.h"
 #include "ota_cmd.h"
 
 struct ota_data {
@@ -210,7 +210,7 @@ void ota_start(void) {
 
 /********************************************************************/
 
-void ota_init( BaseType_t coreID ) {
+void ramses_ota_init( BaseType_t coreID ) {
   struct ota_data *ctxt = ota_ctxt();
   ctxt->coreID = coreID;
 

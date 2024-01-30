@@ -14,8 +14,8 @@
 
 #include "esp_console.h"
 
-#include "ota.h"
 #include "ota_cmd.h"
+#include "ramses_ota.h"
 
 /*********************************************************
  * Helper Functions
