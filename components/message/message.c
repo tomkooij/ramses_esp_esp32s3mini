@@ -13,6 +13,8 @@
  */
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
+#include <sys/time.h>
 
 static const char * TAG = "MSG";
 #include "esp_log.h"
@@ -89,6 +91,9 @@ struct message {
 
   uint8_t nBytes;
   uint8_t raw[MAX_RAW];
+
+#define MSG_TIMESTAMP 20
+  char timestamp[MSG_TIMESTAMP];
 };
 
 static void msg_reset( struct message *msg ) {
@@ -96,6 +101,17 @@ static void msg_reset( struct message *msg ) {
     memset( msg, 0, sizeof(*msg) );
   }
 }
+
+static void msg_timestamp( char *timestamp ) {
+  time_t now;
+  struct tm timeinfo;
+
+  time(&now);
+  localtime_r(&now, &timeinfo);
+  strftime( timestamp, MSG_TIMESTAMP, "%Y-%m-%d %H:%M:%S", &timeinfo );
+}
+
+char const *msg_get_ts( struct message const  *msg ){ return msg->timestamp; }
 
 /********************************************************
 ** Message lists
@@ -169,7 +185,12 @@ static void msg_create_pool(void) {
 ** Received Message list
 ********************************************************/
 static struct msg_list rx_list;
-void msg_rx_ready( struct message **msg ) { gateway_radio_rx( msg ); }
+
+void msg_rx_ready( struct message **msg ) {
+  msg_timestamp( (*msg)->timestamp );
+  gateway_radio_rx( msg );
+}
+
 struct message *msg_rx_get(void) { return msg_get( &rx_list ); }
 
 
@@ -177,7 +198,9 @@ struct message *msg_rx_get(void) { return msg_get( &rx_list ); }
 ** Transmit Message list
 ********************************************************/
 static struct msg_list tx_list;
+
 void msg_tx_ready( struct message **msg ) { msg_put( &tx_list, msg, 0 ); }
+
 static struct message *msg_tx_get(void) {  return msg_get( &tx_list ); }
 
 /********************************************************

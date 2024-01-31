@@ -19,6 +19,8 @@ static const char *TAG = "GATEWAY";
 #include "freertos/queue.h"
 
 #include "esp_console.h"
+
+#include "ramses-mqtt.h"
 #include "device.h"
 #include "gateway.h"
 
@@ -95,8 +97,10 @@ static void gateway_radio_rx_func( void *param ) {
   if( msg ) {
 	char msgBuff[256];
     uint8_t len = msg_print_all( msg, msgBuff );
-    if( len )
-      printf(msgBuff);
+    if( len ) {
+      printf("%s %s", msg_get_ts(msg),msgBuff);
+      MQTT_publish_rx( msg_get_ts(msg), msgBuff );
+    }
     msg_free( &msg );
   }
 }

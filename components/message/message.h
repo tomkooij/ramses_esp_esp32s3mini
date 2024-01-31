@@ -60,6 +60,8 @@ extern void msg_tx_ready( struct message **msg );
 extern uint8_t msg_scan( struct message *msg, uint8_t byte );
 extern void msg_change_addr( struct message *msg,uint8_t addr, uint8_t id,uint32_t class , uint8_t myId,uint32_t myClass );  
 
+extern char const *msg_get_ts( struct message const  *msg );
+
 extern void msg_init(void);
 extern void msg_work(void);
 

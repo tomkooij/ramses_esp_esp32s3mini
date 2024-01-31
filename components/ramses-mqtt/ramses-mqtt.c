@@ -158,6 +158,22 @@ static void mqtt_publish_info( struct mqtt_data *ctxt ) {
   }
 }
 
+static void mqtt_publish_rx( struct mqtt_data *ctxt, char const *ts, char const *msg ) {
+  char topic[64], rx[256];
+
+  char *end = strstr( msg,"\r\n");
+  if( end ) end[0] = '\0';
+
+  sprintf( topic, "%s/rx", ctxt->topic );
+  sprintf( rx , "{\"ts\":\"%s\", \"msg\":\"%s\"}",ts,msg);
+  esp_mqtt_client_publish( ctxt->client,topic, rx, 0, 1, 1);
+}
+
+void MQTT_publish_rx( char const *ts, char const *msg ) {
+  struct mqtt_data *ctxt= mqtt_ctxt();
+  mqtt_publish_rx( ctxt, ts, msg );
+}
+
 static void mqtt_event_handler( void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data )
 {
   struct mqtt_data *ctxt = handler_args;

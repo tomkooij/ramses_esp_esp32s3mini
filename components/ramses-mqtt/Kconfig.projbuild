@@ -3,7 +3,7 @@ menu "MQTT Configuration"
     config MQTT_LOG_LEVEL
         int "MQTT LOG LEVEL"
         range 0	5
-        default 3
+        default 2
         help
         	Set LOG Level for MQTT module
         	0=None
