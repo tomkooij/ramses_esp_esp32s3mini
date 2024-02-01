@@ -11,6 +11,13 @@
 #define _RAMSES_NETWORK_H_
 
 extern void NET_set_mqtt_broker( char *new_server );
+extern void NET_set_mqtt_user( char *new_user );
+extern void NET_set_mqtt_password( char *new_password );
+
+extern char const *NET_get_mqtt_broker(void);
+extern char const *NET_get_mqtt_user(void);
+extern char const *NET_get_mqtt_password(void);
+
 extern void NET_set_sntp_server( char *new_server );
 
 extern void ramses_network_init( BaseType_t coreID );

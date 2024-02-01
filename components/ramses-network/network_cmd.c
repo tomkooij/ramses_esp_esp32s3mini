@@ -39,12 +39,79 @@ static void cmd_help( esp_console_cmd_t const *list, char *prefix ) {
 }
 
 /*********************************************************
- * MQTT Server command
+ * MQTT Server commands
  */
-static int net_cmd_mqtt_broker( int argc, char **argv ) {
+enum mqtt_cmd_list {
+  MQTT_CMD_BROKER,
+  MQTT_CMD_USER,
+  MQTT_CMD_PASSWORD,
+  // Last
+  MQTT_CMD_MAX
+};
+
+static int mqtt_cmd_broker( int argc, char **argv ) {
 
   if( argc>1 )
 	  NET_set_mqtt_broker( argv[1] );
+
+  return 0;
+}
+
+static int mqtt_cmd_user( int argc, char **argv ) {
+
+  if( argc>1 )
+	  NET_set_mqtt_user( argv[1] );
+
+  return 0;
+}
+
+static int mqtt_cmd_password( int argc, char **argv ) {
+
+  if( argc>1 )
+	  NET_set_mqtt_password( argv[1] );
+
+  return 0;
+}
+
+static esp_console_cmd_t const mqtt_cmds[MQTT_CMD_MAX+1] = {
+  [MQTT_CMD_BROKER] = {
+    .command = "broker",
+    .help = "Set MQTT <Broker>",
+    .hint = NULL,
+    .func = &mqtt_cmd_broker,
+  },
+  [MQTT_CMD_USER] = {
+    .command = "user",
+    .help = "Set MQTT <User>",
+    .hint = NULL,
+    .func = &mqtt_cmd_user,
+  },
+  [MQTT_CMD_PASSWORD] = {
+    .command = "password",
+    .help = "Set MQTT <Password>",
+    .hint = NULL,
+    .func = &mqtt_cmd_password,
+  },
+  // List termination
+  [MQTT_CMD_MAX] = {
+    .command = NULL,
+    .help = NULL,
+    .hint = NULL,
+    .func = NULL,
+  },
+};
+
+static int net_cmd_mqtt( int argc, char **argv ) {
+
+  if( argc==1 ) {
+	cmd_help( mqtt_cmds, "mqtt" );
+  } else {
+	esp_console_cmd_func_t func = cmd_lookup( mqtt_cmds, argv[1] );
+	if( func )
+	  ( func )( --argc, ++argv );
+	else
+	  cmd_help( mqtt_cmds, "mqtt" );
+  }
 
   return 0;
 }
@@ -73,9 +140,9 @@ enum net_cmd_list {
 static esp_console_cmd_t const cmds[NET_CMD_MAX+1] = {
   [NET_CMD_MQTT] = {
     .command = "mqtt",
-    .help = "Set MQTT <Broker>",
+    .help = "Set MQTT parameters",
     .hint = NULL,
-    .func = &net_cmd_mqtt_broker,
+    .func = &net_cmd_mqtt,
   },
   [NET_CMD_SNTP] = {
     .command = "sntp",

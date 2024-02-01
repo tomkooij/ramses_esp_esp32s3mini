@@ -22,7 +22,11 @@
 
 // NVS identifiers
 #define NETWORK_NAMESPACE "network"
-#define MQTT_BROKER "mqtt_broker"
+
+#define MQTT_BROKER   "mqtt_broker"
+#define MQTT_USER     "mqtt_user"
+#define MQTT_PASSWORD "mqtt_password"
+
 #define SNTP_SERVER "sntp_server"
 
 #include "network_cmd.h"
@@ -37,13 +41,17 @@ struct network_data {
 
   size_t mqtt_broker_len;
   char *mqtt_broker;
+  size_t mqtt_user_len;
+  char *mqtt_user;
+  size_t mqtt_password_len;
+  char *mqtt_password;
+
   size_t sntp_server_len;
   char *sntp_server;
 };
 
 static struct network_data *network_ctxt( void ) {
-  static struct network_data data ={
-  };
+  static struct network_data data;
   static struct network_data * ctxt = NULL;
   if( !ctxt ) {
 	ctxt = &data;
@@ -91,7 +99,105 @@ void NET_set_mqtt_broker( char *new_broker ) {
     net_set_mqtt_broker( ctxt, new_broker );
 }
 
+char const *NET_get_mqtt_broker(void){
+  struct network_data *ctxt = network_ctxt();
+  return ctxt->mqtt_broker;
+}
 
+/********************************************************************************
+ * MQTT user
+ */
+
+static void net_get_mqtt_user( struct network_data *ctxt ) {
+  esp_err_t err  = nvs_get_str( ctxt->nvs, MQTT_USER, NULL, &ctxt->mqtt_user_len );
+  if( err==ESP_OK ) {
+    if( ctxt->mqtt_user_len!=0 ) {
+      ctxt->mqtt_user = malloc( ctxt->mqtt_user_len );	// length includes '\0' terminator
+      if( ctxt->mqtt_user ) {
+        nvs_get_str( ctxt->nvs, MQTT_USER, ctxt->mqtt_user, &ctxt->mqtt_user_len );
+      }
+    }
+  }
+}
+
+static void net_set_mqtt_user( struct network_data *ctxt, char *new_user ) {
+  if( !ctxt->mqtt_user || strcmp( ctxt->mqtt_user, new_user ) ) {
+    size_t len = strlen( new_user );
+    if( len >= ctxt->mqtt_user_len ) {
+      if( ctxt->mqtt_user ) free( ctxt->mqtt_user );
+      ctxt->mqtt_user_len = len+1; // Need space for '\0' terminator
+      ctxt->mqtt_user = malloc( ctxt->mqtt_user_len );
+    }
+
+    if( len>0 && ctxt->mqtt_user ) {
+        strcpy( ctxt->mqtt_user, new_user );
+        nvs_set_str( ctxt->nvs, MQTT_USER, ctxt->mqtt_user );
+    }
+  }
+}
+
+void NET_set_mqtt_user( char *new_user ) {
+  struct network_data *ctxt = network_ctxt();
+  if( ctxt && new_user )
+    net_set_mqtt_user( ctxt, new_user );
+}
+
+char const *NET_get_mqtt_user(void){
+  struct network_data *ctxt = network_ctxt();
+  return ctxt->mqtt_user;
+}
+
+/********************************************************************************
+ * MQTT password
+ */
+
+static void net_get_mqtt_password( struct network_data *ctxt ) {
+  esp_err_t err  = nvs_get_str( ctxt->nvs, MQTT_PASSWORD, NULL, &ctxt->mqtt_password_len );
+  if( err==ESP_OK ) {
+    if( ctxt->mqtt_password_len!=0 ) {
+      ctxt->mqtt_password = malloc( ctxt->mqtt_password_len );	// length includes '\0' terminator
+      if( ctxt->mqtt_password ) {
+        nvs_get_str( ctxt->nvs, MQTT_PASSWORD, ctxt->mqtt_password, &ctxt->mqtt_password_len );
+      }
+    }
+  }
+}
+
+static void net_set_mqtt_password( struct network_data *ctxt, char *new_password ) {
+  if( !ctxt->mqtt_password || strcmp( ctxt->mqtt_password, new_password ) ) {
+    size_t len = strlen( new_password );
+    if( len >= ctxt->mqtt_password_len ) {
+      if( ctxt->mqtt_password ) free( ctxt->mqtt_password );
+      ctxt->mqtt_password_len = len+1; // Need space for '\0' terminator
+      ctxt->mqtt_password = malloc( ctxt->mqtt_password_len );
+    }
+
+    if( len>0 && ctxt->mqtt_password ) {
+        strcpy( ctxt->mqtt_password, new_password );
+        nvs_set_str( ctxt->nvs, MQTT_PASSWORD, ctxt->mqtt_password );
+    }
+  }
+}
+
+void NET_set_mqtt_password( char *new_password ) {
+  struct network_data *ctxt = network_ctxt();
+  if( ctxt && new_password )
+    net_set_mqtt_password( ctxt, new_password );
+}
+
+char const *NET_get_mqtt_password(void){
+  struct network_data *ctxt = network_ctxt();
+  return ctxt->mqtt_password;
+}
+
+/********************************************************************************
+ * MQTT broker params
+ */
+static void net_get_mqtt_params( struct network_data *ctxt ) {
+  net_get_mqtt_broker( ctxt );
+  net_get_mqtt_user( ctxt );
+  net_get_mqtt_password( ctxt );
+}
 /********************************************************************************
  * SNTP server uri
  */
@@ -145,7 +251,7 @@ void ramses_network_init( BaseType_t coreID ) {
 
   esp_err_t err = nvs_open( NETWORK_NAMESPACE, NVS_READWRITE, &ctxt->nvs );
   if( err==ESP_OK ) {
-    net_get_mqtt_broker( ctxt );
+    net_get_mqtt_params( ctxt );
     net_get_sntp_server( ctxt );
   }
 

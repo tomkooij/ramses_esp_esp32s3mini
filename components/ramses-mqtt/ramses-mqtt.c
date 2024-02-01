@@ -74,9 +74,6 @@ static struct mqtt_data *mqtt_ctxt( void ) {
     .state = MQTT_IDLE,
 	.root = CONFIG_MQTT_ROOT,
     .cfg = {
-      .broker.address = {
-        .uri = "mqtt://192.168.253.251:1883",
-	  },
       .session = {
     	.last_will = {
           .msg = "offline",
@@ -106,7 +103,31 @@ static void log_error_if_nonzero( const char *message, int error_code ) {
 }
 
 static bool mqtt_broker_configured( struct mqtt_data *ctxt ) {
-  bool res = ( ctxt->cfg.broker.address.uri[0] != '\0' );
+  bool res;
+
+  // Most recent config
+  char const * uri = NET_get_mqtt_broker();
+  char const * user = NET_get_mqtt_user();
+  char const * password = NET_get_mqtt_password();
+
+  if( uri ) ESP_LOGI( TAG, "broker=<%s>",uri);
+  if( user ) ESP_LOGI( TAG, "user=<%s>",user);
+  if( password ) ESP_LOGI( TAG, "password=<%s>",password);
+
+  res = uri  && uri[0] != '\0';
+  if( res ) {  // Have URI, are we trying to authenticate
+	if( user || password ) {
+	  res = user && password; // Need both
+	  if( res ) res = user[0] != '\0';
+	  if( res ) res = password[0] != '\0';
+	}
+  }
+
+  if( res ) {
+    ctxt->cfg.broker.address.uri = uri;
+    ctxt->cfg.credentials.username = user;
+    ctxt->cfg.credentials.authentication.password = password;
+  }
 
   return res;
 }
@@ -174,7 +195,8 @@ static void mqtt_publish_rx( struct mqtt_data *ctxt, char const *ts, char const 
 
 void MQTT_publish_rx( char const *ts, char const *msg ) {
   struct mqtt_data *ctxt= mqtt_ctxt();
-  mqtt_publish_rx( ctxt, ts, msg );
+  if( ctxt->state == MQTT_ACTIVE )
+    mqtt_publish_rx( ctxt, ts, msg );
 }
 
 /*******************************************************************************
@@ -192,7 +214,7 @@ static void mqtt_process_data( esp_mqtt_event_handle_t event ) {
   printf("DATA=%.*s\r\n", event->data_len, event->data);
 }
 
-		static void mqtt_event_handler( void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data )
+static void mqtt_event_handler( void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data )
 {
   struct mqtt_data *ctxt = handler_args;
 
