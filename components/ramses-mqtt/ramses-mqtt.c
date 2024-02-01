@@ -158,6 +158,9 @@ static void mqtt_publish_info( struct mqtt_data *ctxt ) {
   }
 }
 
+/*******************************************************************************
+ * RX message
+ */
 static void mqtt_publish_rx( struct mqtt_data *ctxt, char const *ts, char const *msg ) {
   char topic[64], rx[256];
 
@@ -174,14 +177,28 @@ void MQTT_publish_rx( char const *ts, char const *msg ) {
   mqtt_publish_rx( ctxt, ts, msg );
 }
 
-static void mqtt_event_handler( void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data )
+/*******************************************************************************
+ * TX message
+ */
+static void mqtt_subscribe_tx( struct mqtt_data *ctxt ) {
+  char topic[64];
+  sprintf( topic, "%s/tx", ctxt->topic );
+  esp_mqtt_client_subscribe( ctxt->client, topic, 0);
+}
+
+
+static void mqtt_process_data( esp_mqtt_event_handle_t event ) {
+  printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
+  printf("DATA=%.*s\r\n", event->data_len, event->data);
+}
+
+		static void mqtt_event_handler( void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data )
 {
   struct mqtt_data *ctxt = handler_args;
 
   ESP_LOGD(TAG, "Event dispatched from event loop base=%s, event_id=%" PRIi32 "", base, event_id);
   esp_mqtt_event_handle_t event = event_data;
-  esp_mqtt_client_handle_t client = event->client;
-  int msg_id;
+//  esp_mqtt_client_handle_t client = event->client;
   switch ((esp_mqtt_event_id_t)event_id) {
   case MQTT_EVENT_CONNECTED:
     ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
@@ -194,8 +211,6 @@ static void mqtt_event_handler( void *handler_args, esp_event_base_t base, int32
 
   case MQTT_EVENT_SUBSCRIBED:
     ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
-    msg_id = esp_mqtt_client_publish(client, "/topic/qos0", "data", 0, 0, 0);
-    ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
     break;
 
   case MQTT_EVENT_UNSUBSCRIBED:
@@ -207,10 +222,8 @@ static void mqtt_event_handler( void *handler_args, esp_event_base_t base, int32
     break;
 
   case MQTT_EVENT_DATA:
-    ESP_LOGI(TAG, "MQTT_EVENT_DATA");
-    printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
-    printf("DATA=%.*s\r\n", event->data_len, event->data);
-    break;
+    mqtt_process_data(event);
+	break;
 
   case MQTT_EVENT_ERROR:
     ESP_LOGI(TAG, "MQTT_EVENT_ERROR");
@@ -259,7 +272,8 @@ static void mqtt_state_machine( struct mqtt_data *ctxt ) {
 
   case MQTT_CONNECTED:
     esp_mqtt_client_publish( ctxt->client, ctxt->topic, "online", 0, 1, 1);
-    mqtt_set_state( ctxt,MQTT_ACTIVE );
+    mqtt_subscribe_tx( ctxt );
+	mqtt_set_state( ctxt,MQTT_ACTIVE );
     break;
 
   case MQTT_ACTIVE:
@@ -293,4 +307,3 @@ MQTT_HNDL ramses_mqtt_init( BaseType_t coreID ) {
 
   return ctxt;
 }
-
