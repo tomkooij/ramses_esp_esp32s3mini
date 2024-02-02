@@ -13,8 +13,9 @@
 #include "freertos/FreeRTOS.h"
 
 #include "message.h"
-void gateway_radio_rx( struct message **message );
+extern void gateway_radio_rx( struct message **message );
+extern void gateway_tx( char const *msg );
 
-void gateway_init( BaseType_t coreID );
+extern void gateway_init( BaseType_t coreID );
 
 #endif // _GATEWAY_H_

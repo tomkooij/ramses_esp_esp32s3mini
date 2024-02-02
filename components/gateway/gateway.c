@@ -145,6 +145,10 @@ static void tx_msg( char const *cmd ){
   }
 }
 
+void gateway_tx( char const *msg ) {
+  tx_msg( msg );
+}
+
 static int gateway_radio_tx(int argc, char **argv) {
   if( argc==8 ) {
 	char msg[256];

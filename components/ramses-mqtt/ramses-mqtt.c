@@ -20,6 +20,7 @@ static const char *TAG = "MQTT";
 #include "mqtt_client.h"
 
 #include "device.h"
+#include "gateway.h"
 #include "ramses_wifi.h"
 #include "ramses-mqtt.h"
 
@@ -208,10 +209,48 @@ static void mqtt_subscribe_tx( struct mqtt_data *ctxt ) {
   esp_mqtt_client_subscribe( ctxt->client, topic, 0);
 }
 
+static void mqtt_process_tx( struct mqtt_data *ctxt, char const *data, int dataLen ) {
+  char msg[128];
+  sprintf( msg,"%.*s", dataLen,data );	// Make sure msg contains trailing '\0'
 
-static void mqtt_process_data( esp_mqtt_event_handle_t event ) {
-  printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
-  printf("DATA=%.*s\r\n", event->data_len, event->data);
+  gateway_tx( msg );
+}
+
+/*******************************************************************************
+ * Process subscribed topics
+ */
+
+enum topics {
+  TOPIC_TX,
+  TOPIC_MAX
+};
+
+static void mqtt_process_data( struct mqtt_data *ctxt, esp_mqtt_event_handle_t event ) {
+  static struct topic {
+	char const *topic;
+	void (*func)( struct mqtt_data *ctxt, char const *data, int dataLen );
+  } const topic_list[TOPIC_MAX+1] = {
+    [TOPIC_TX]  = { "tx",      mqtt_process_tx },
+    // List terminator
+    [TOPIC_MAX] = { NULL,NULL },
+  };
+  struct topic const *topic = topic_list;
+
+  size_t offset = strlen( ctxt->topic );
+  char const *subtopic = event->topic + offset + 1;
+
+  while( topic->topic != NULL ) {
+    if( !strncmp( subtopic, topic->topic, strlen(topic->topic) ) ) {
+      if( topic->func )
+    	( topic->func )( ctxt, event->data, event->data_len );
+      break;
+    }
+    topic++;
+  }
+
+  if( topic->topic != NULL )
+    ESP_LOGI(TAG, "Unexpected event %.*s",event->topic_len-offset-1, subtopic );
+
 }
 
 static void mqtt_event_handler( void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data )
@@ -244,7 +283,7 @@ static void mqtt_event_handler( void *handler_args, esp_event_base_t base, int32
     break;
 
   case MQTT_EVENT_DATA:
-    mqtt_process_data(event);
+    mqtt_process_data(ctxt, event);
 	break;
 
   case MQTT_EVENT_ERROR:
