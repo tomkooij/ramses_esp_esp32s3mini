@@ -110,6 +110,8 @@ static esp_err_t ota_check_file_hdr( struct ota_data *ctxt ) {
 	  if( memcmp( app_info.version, running_app_info.version, sizeof(app_info.version) ) == 0 ) {
 	    ESP_LOGW(TAG, "Current running version is the same as a new. We will not continue the update.");
 	    err=ESP_FAIL;
+	  } else {
+        ESP_LOGI(TAG, "Downloading firmware version %s",app_info.version);
 	  }
 	}
   }

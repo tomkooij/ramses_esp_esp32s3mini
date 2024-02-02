@@ -8,6 +8,8 @@
  *
  */
 
+#include "esp_system.h"
+
 #include "cmd.h"
 
 /*********************************************************
@@ -34,7 +36,7 @@ void cmd_help( esp_console_cmd_t const *list, char *prefix ) {
  * Console initialisation
  */
 
-void console_init(void) {
+static void console_init(void) {
   esp_console_repl_t *repl = NULL;
   esp_console_repl_config_t repl_config = ESP_CONSOLE_REPL_CONFIG_DEFAULT();
   /* Prompt to be printed before each line.
@@ -61,3 +63,64 @@ void console_init(void) {
   ESP_ERROR_CHECK(esp_console_start_repl(repl));
 }
 
+/*********************************************************
+ * utility commands
+ */
+
+enum cmd_list {
+  CMD_CMD,
+  CMD_RESET,
+  // Last
+  CMD_MAX
+};
+
+/*********************************************************************/
+
+static int cmd_reset( int argc, char **argv ) {
+  esp_restart();
+  return 0;
+}
+
+/*********************************************************************/
+
+static int cmd_cmd( int argc, char **argv );  // forward declaration
+
+static esp_console_cmd_t const cmd_cmds[CMD_MAX+1] = {
+  [CMD_CMD] = {
+    .command = "cmd",
+    .help = "List utility commands",
+    .hint = NULL,
+    .func = &cmd_cmd,
+  },
+  [CMD_RESET] = {
+    .command = "reset",
+    .help = "Soft reset",
+    .hint = NULL,
+    .func = &cmd_reset,
+  },
+  // List termination
+  [CMD_MAX] = {
+    .command = NULL,
+    .help = NULL,
+    .hint = NULL,
+    .func = NULL,
+  },
+};
+
+static int cmd_cmd( int argc, char **argv ) {
+  cmd_help( cmd_cmds, "" );
+  return 0;
+}
+
+void cmd_register(void) {
+  enum cmd_list cmd;
+  for( cmd=0 ; cmd<CMD_MAX ; cmd++ )
+    ESP_ERROR_CHECK( esp_console_cmd_register(&cmd_cmds[cmd]) );
+}
+
+/*********************************************************************/
+
+void cmd_init(void) {
+  console_init();
+  cmd_register();
+}

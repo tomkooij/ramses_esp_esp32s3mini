@@ -18,6 +18,6 @@
 extern esp_console_cmd_func_t cmd_lookup( esp_console_cmd_t const *list, char *command );
 extern void cmd_help( esp_console_cmd_t const *list, char *prefix );
 
-extern void console_init(void);
+extern void cmd_init(void);
 
 #endif // _CMD_H_

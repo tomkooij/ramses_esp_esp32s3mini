@@ -49,7 +49,7 @@ static void Host_Task( void *param )
   ESP_LOGI( TAG, "Task Started");
 
   // Basic console initialisation
-  console_init();
+  cmd_init();
   ramses_mqtt_init( ctxt->coreID );
 
   gateway_init( ctxt->coreID );
