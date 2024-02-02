@@ -10,6 +10,8 @@
 #ifndef _RAMSES_NETWORK_H_
 #define _RAMSES_NETWORK_H_
 
+#include "freertos/FreeRTOS.h"
+
 extern void NET_set_mqtt_broker( char *new_server );
 extern void NET_set_mqtt_user( char *new_user );
 extern void NET_set_mqtt_password( char *new_password );

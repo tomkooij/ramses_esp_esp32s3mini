@@ -7,37 +7,14 @@
  * NVS Management
  *
  */
-#include <string.h>
-
 static const char * TAG = "NVS";
 #include "esp_log.h"
 #include "esp_err.h"
 
-#include "esp_console.h"
-
 #include "nvs_flash.h"
 
+#include "cmd.h"
 #include "ramses_nvs.h"
-
-/*********************************************************
- * Helper Functions
- */
-static esp_console_cmd_func_t cmd_lookup( esp_console_cmd_t const *list, char *command ) {
-  while( list->func != NULL ) {
-    if( !strcmp( command, list->command ) )
-      break;
-    list++;
-  }
-
-  return list->func;
-}
-
-static void cmd_help( esp_console_cmd_t const *list, char *prefix ) {
-  while( list->func ) {
-	printf("%s %10s %s\n",prefix,list->command,list->help );
-	list++;
-  }
-}
 
 /*********************************************************
  * ERASE command

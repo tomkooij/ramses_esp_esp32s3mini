@@ -7,36 +7,10 @@
  * General Network Commands
  *
  */
-#include <string.h>
-#include <stdio.h>
-
-#include "freertos/FreeRTOS.h"
-
-#include "esp_console.h"
-
+#include "cmd.h"
 #include "network_cmd.h"
 
 #include "ramses_network.h"
-
-/*********************************************************
- * Helper Functions
- */
-static esp_console_cmd_func_t cmd_lookup( esp_console_cmd_t const *list, char *command ) {
-  while( list->func != NULL ) {
-    if( !strcmp( command, list->command ) )
-      break;
-    list++;
-  }
-
-  return list->func;
-}
-
-static void cmd_help( esp_console_cmd_t const *list, char *prefix ) {
-  while( list->func ) {
-	printf("%s %10s %s\n",prefix,list->command,list->help );
-	list++;
-  }
-}
 
 /*********************************************************
  * MQTT Server commands

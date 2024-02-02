@@ -10,6 +10,8 @@
 #ifndef _RAMSES_OTA_H_
 #define _RAMSES_OTA_H_
 
+#include "freertos/FreeRTOS.h"
+
 extern void ota_set_url( const char * url );
 extern void ota_set_version( const char * version );
 extern void ota_set_filename( const char * filename );
