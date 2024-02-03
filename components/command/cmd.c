@@ -8,6 +8,9 @@
  *
  */
 
+static const char *TAG = "CMD";
+#include "esp_log.h"
+
 #include "esp_system.h"
 
 #include "cmd.h"
@@ -119,6 +122,14 @@ void cmd_register(void) {
 }
 
 /*********************************************************************/
+
+esp_err_t cmd_run( char const *cmdline, int *cmd_ret ) {
+  esp_err_t err = esp_console_run( cmdline, cmd_ret );
+  if( err != ESP_OK ) {
+	ESP_LOGW( TAG, "<%s> error %s <%d>",cmdline,esp_err_to_name(err),err );
+  }
+  return err;
+}
 
 void cmd_init(void) {
   console_init();

@@ -19,6 +19,7 @@ static const char *TAG = "MQTT";
 
 #include "mqtt_client.h"
 
+#include "cmd.h"
 #include "device.h"
 #include "gateway.h"
 #include "ramses_wifi.h"
@@ -217,11 +218,51 @@ static void mqtt_process_tx( struct mqtt_data *ctxt, char const *data, int dataL
 }
 
 /*******************************************************************************
+ * General command
+ */
+
+static void mqtt_publish_cmd( struct mqtt_data *ctxt ) {
+  char topic[64];
+  sprintf( topic, "%s/cmd/cmd",ctxt->topic );
+  esp_mqtt_client_publish( ctxt->client,topic, NULL, 0, 0, 0);
+}
+
+
+static void mqtt_subscribe_cmd( struct mqtt_data *ctxt ) {
+  char topic[64];
+  sprintf( topic, "%s/cmd/cmd", ctxt->topic );
+  esp_mqtt_client_subscribe( ctxt->client, topic, 2 );
+}
+
+static void mqtt_publish_cmd_result( struct mqtt_data *ctxt, char const *cmd, esp_err_t err, int retVal ) {
+  char topic[192],data[128];
+
+  sprintf( topic, "%s/cmd/result",ctxt->topic );
+  sprintf( data, "{ \"cmd\":\"%s\", \"err\":\"%s\", \"return\":%d} ",cmd, esp_err_to_name(err),retVal );
+  esp_mqtt_client_publish( ctxt->client,topic, data, 0, 0, 0 );
+
+//  mqtt_publish_cmd( ctxt ); // Clear CMD so we don't execute ita again
+}
+
+static void mqtt_process_cmd( struct mqtt_data *ctxt, char const *data, int dataLen ) {
+  if( dataLen>0 ) {
+    char cmdline[128];
+    sprintf( cmdline,"%.*s", dataLen,data );	// Make sure cmdline contains trailing '\0'
+
+    int retVal;
+    esp_err_t err = cmd_run( cmdline, &retVal );
+
+    mqtt_publish_cmd_result( ctxt, cmdline, err, retVal );
+  }
+}
+
+/*******************************************************************************
  * Process subscribed topics
  */
 
 enum topics {
   TOPIC_TX,
+  TOPIC_CMD,
   TOPIC_MAX
 };
 
@@ -231,6 +272,7 @@ static void mqtt_process_data( struct mqtt_data *ctxt, esp_mqtt_event_handle_t e
 	void (*func)( struct mqtt_data *ctxt, char const *data, int dataLen );
   } const topic_list[TOPIC_MAX+1] = {
     [TOPIC_TX]  = { "tx",      mqtt_process_tx },
+    [TOPIC_CMD] = { "cmd",     mqtt_process_cmd },
     // List terminator
     [TOPIC_MAX] = { NULL,NULL },
   };
@@ -334,6 +376,8 @@ static void mqtt_state_machine( struct mqtt_data *ctxt ) {
   case MQTT_CONNECTED:
     esp_mqtt_client_publish( ctxt->client, ctxt->topic, "online", 0, 1, 1);
     mqtt_subscribe_tx( ctxt );
+    mqtt_publish_cmd( ctxt );  // Clear old CMD
+    mqtt_subscribe_cmd( ctxt );
 	mqtt_set_state( ctxt,MQTT_ACTIVE );
     break;
 
