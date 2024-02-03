@@ -16,8 +16,10 @@
 #include "esp_err.h"
 #include "esp_console.h"
 
-extern esp_console_cmd_func_t cmd_lookup( esp_console_cmd_t const *list, char *command );
-extern void cmd_help( esp_console_cmd_t const *list, char *prefix );
+#define NULL_COMMAND .command = NULL, .help = NULL,  .hint = NULL,  .func = NULL
+
+extern int cmd_menu( int argc, char **argv, esp_console_cmd_t const *cmds, char const *menu );
+extern void cmd_menu_register( esp_console_cmd_t const *cmd );
 
 extern esp_err_t cmd_run( char const *cmdline, int *cmd_ret );
 

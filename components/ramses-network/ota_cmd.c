@@ -57,69 +57,49 @@ static int ota_cmd_start( int argc, char **argv ) {
 /*********************************************************
  * Top Level command
  */
-enum ota_cmd_list {
-  OTA_CMD_URL,
-  OTA_CMD_VERSION,
-  OTA_CMD_FILENAME,
-  OTA_CMD_START,
-  OTA_CMD_MAX
-};
-
-static esp_console_cmd_t const cmds[OTA_CMD_MAX+1] = {
-  [OTA_CMD_URL] = {
+static esp_console_cmd_t const ota_cmds[] = {
+  {
     .command = "url",
     .help = "Set OTA <url>",
     .hint = NULL,
     .func = ota_cmd_url,
   },
-  [OTA_CMD_VERSION] = {
+  {
     .command = "version",
     .help = "Set OTA <version>",
     .hint = NULL,
     .func = ota_cmd_version,
   },
-  [OTA_CMD_FILENAME] = {
+  {
     .command = "filename",
     .help = "Set OTA <filename>",
     .hint = NULL,
     .func = ota_cmd_filename,
   },
-  [OTA_CMD_START] = {
+  {
     .command = "start",
     .help = "Start OTA",
     .hint = NULL,
     .func = ota_cmd_start,
   },
   // List termination
-  [OTA_CMD_MAX] = {
-    .command = NULL,
-    .help = NULL,
-    .hint = NULL,
-    .func = NULL,
-  },
+  { NULL_COMMAND }
 };
 
 static int ota_cmd( int argc, char **argv ) {
-  if( argc==1 ) {
-	cmd_help( cmds, "ota" );
-  } else {
-	esp_console_cmd_func_t func = cmd_lookup( cmds, argv[1] );
-	if( func )
-      ( func )( --argc, ++argv );
-	else
-      cmd_help( cmds, "ota" );
-  }
-
-  return 0;
+  return cmd_menu( argc, argv, ota_cmds, argv[0] );
 }
 
 void ota_register(void) {
-  const esp_console_cmd_t ota = {
-    .command = "ota",
-    .help = "OTA commands, enter 'ota' for list",
-	.hint = NULL,
-	.func = &ota_cmd,
+  const esp_console_cmd_t ota[] = {
+    {
+      .command = "ota",
+      .help = "OTA commands, enter 'ota' for list",
+	  .hint = NULL,
+	  .func = &ota_cmd,
+    },
+	{ NULL_COMMAND }
   };
 
-  ESP_ERROR_CHECK( esp_console_cmd_register(&ota) );
+  cmd_menu_register( ota );
 }

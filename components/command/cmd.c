@@ -18,7 +18,7 @@ static const char *TAG = "CMD";
 /*********************************************************
  * Helper Functions
  */
-esp_console_cmd_func_t cmd_lookup( esp_console_cmd_t const *list, char *command ) {
+static esp_console_cmd_func_t cmd_lookup( esp_console_cmd_t const *list, char *command ) {
   while( list->func != NULL ) {
     if( !strcmp( command, list->command ) )
       break;
@@ -28,10 +28,31 @@ esp_console_cmd_func_t cmd_lookup( esp_console_cmd_t const *list, char *command 
   return list->func;
 }
 
-void cmd_help( esp_console_cmd_t const *list, char *prefix ) {
+static void cmd_help( esp_console_cmd_t const *list, char const *prefix ) {
   while( list->func ) {
-	printf("%s %10s %s\n",prefix,list->command,list->help );
+	printf("%s %-10s %s\n",prefix,list->command,list->help );
 	list++;
+  }
+}
+
+int cmd_menu( int argc, char **argv, esp_console_cmd_t const *cmds, char const *menu ) {
+  if( argc==1 ) {
+	cmd_help( cmds, menu );
+  } else {
+	esp_console_cmd_func_t func = cmd_lookup( cmds, argv[1] );
+	if( func )
+	  ( func )( --argc, ++argv );
+	else
+	  cmd_help( cmds, menu );
+  }
+
+  return 0;
+}
+
+void cmd_menu_register( esp_console_cmd_t const *cmd ) {
+  while( cmd->command != NULL ) {
+	ESP_ERROR_CHECK( esp_console_cmd_register(cmd) );
+	cmd++;
   }
 }
 
