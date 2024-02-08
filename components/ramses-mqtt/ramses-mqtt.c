@@ -192,7 +192,7 @@ static void mqtt_publish_rx( struct mqtt_data *ctxt, char const *ts, char const 
 
   sprintf( topic, "%s/rx", ctxt->topic );
   sprintf( rx , "{\"ts\":\"%s\", \"msg\":\"%s\"}",ts,msg);
-  esp_mqtt_client_publish( ctxt->client,topic, rx, 0, 1, 1);
+  esp_mqtt_client_publish( ctxt->client,topic, rx, 0, 1, 0 );
 }
 
 void MQTT_publish_rx( char const *ts, char const *msg ) {
@@ -213,6 +213,8 @@ static void mqtt_subscribe_tx( struct mqtt_data *ctxt ) {
 static void mqtt_process_tx( struct mqtt_data *ctxt, char const *data, int dataLen ) {
   char msg[128];
   sprintf( msg,"%.*s", dataLen,data );	// Make sure msg contains trailing '\0'
+
+  ESP_LOGI( TAG, "TX:<%s> %s", msg,esp_log_system_timestamp() );
 
   gateway_tx( msg );
 }
@@ -290,7 +292,7 @@ static void mqtt_process_data( struct mqtt_data *ctxt, esp_mqtt_event_handle_t e
     topic++;
   }
 
-  if( topic->topic != NULL )
+  if( topic->topic == NULL )
     ESP_LOGI(TAG, "Unexpected event %.*s",event->topic_len-offset-1, subtopic );
 
 }
@@ -321,7 +323,7 @@ static void mqtt_event_handler( void *handler_args, esp_event_base_t base, int32
     break;
 
   case MQTT_EVENT_PUBLISHED:
-    ESP_LOGI(TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
+    ESP_LOGI(TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d %s", event->msg_id,esp_log_system_timestamp());
     break;
 
   case MQTT_EVENT_DATA:
