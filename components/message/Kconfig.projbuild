@@ -15,8 +15,8 @@ menu "Message Configuration"
 
     config N_MSG
         int "Pre-allocated messages"
-        range 0 8
-        default 4
+        range 0 16
+        default 16
         help
             Number of allocated messages.
     

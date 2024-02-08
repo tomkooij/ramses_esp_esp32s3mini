@@ -142,6 +142,8 @@ static void tx_msg( char const *cmd ){
     } else {
       msg_free( &tx );
     }
+  } else {
+	ESP_LOGW( TAG, "DROPPED <%s>",cmd );
   }
 }
 

@@ -123,15 +123,19 @@ struct msg_list {
 };
 
 static void msg_put( struct msg_list *list, struct message **ppMsg, uint8_t reset ) {
+  struct message *pMsg = NULL;
   if( ppMsg && list ) {
-    struct message *pMsg = (*ppMsg);
+    uint32_t volatile register ilevel = XTOS_DISABLE_ALL_INTERRUPTS;
+    pMsg = (*ppMsg);
     if( pMsg ) {
 
       if( reset )
         msg_reset( pMsg );
 
-      pMsg->prev = list->in;
       pMsg->next = NULL;
+      pMsg->prev = list->in;
+      if( pMsg->prev )
+        ( pMsg->prev )->next = pMsg;
 
       list->in = pMsg;
       if( !list->out )      // list was empty
@@ -139,27 +143,26 @@ static void msg_put( struct msg_list *list, struct message **ppMsg, uint8_t rese
 
       (*ppMsg) = NULL;
     }
+    XTOS_RESTORE_INTLEVEL(ilevel);
   }
 }
 
 static struct message *msg_get( struct msg_list *list ) {
   struct message *pMsg = NULL;
   if( list ) {
+    uint32_t volatile register ilevel = XTOS_DISABLE_ALL_INTERRUPTS;
     pMsg = list->out;
 
     if( pMsg ) {
       list->out = pMsg->next;
-
-      pMsg->next = NULL;
-      if( pMsg->prev ) {
-        ( pMsg->prev )->next = NULL;
-        pMsg->prev = NULL;
-      } else {              // message was last in list
+      if( !list->out )      // message was last in list
         list->in = NULL;    // So list is empty
-      }
+
+      pMsg->prev = pMsg->next = NULL;
 
       pMsg->state = S_START;
     }
+    XTOS_RESTORE_INTLEVEL(ilevel);
   }
 
   return pMsg;
