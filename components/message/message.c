@@ -94,6 +94,7 @@ struct message {
 
 #define MSG_TIMESTAMP 20
   char timestamp[MSG_TIMESTAMP];
+  uint8_t seq;
 };
 
 static void msg_reset( struct message *msg ) {
@@ -187,7 +188,9 @@ static void msg_create_pool(void) {
 static struct msg_list rx_list;
 
 void msg_rx_ready( struct message **msg ) {
+  static uint8_t seq = 0;
   msg_timestamp( (*msg)->timestamp );
+  (*msg)->seq = seq++;
   gateway_radio_rx( msg );
 }
 
@@ -583,6 +586,8 @@ uint8_t msg_print_all( struct message *msg, char *msg_buff ) {
   do {
     len += msg_print( msg, msg_buff+len );
   } while( msg->state != S_COMPLETE );
+
+  len += sprintf( msg_buff+len-2, " # %03d\r\n", msg->seq );
 
   return len;
 }
