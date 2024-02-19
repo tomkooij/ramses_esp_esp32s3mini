@@ -17,6 +17,7 @@
  */
 #include <stdio.h>
 #include <string.h>
+#include <sys/time.h>
 
 #include <driver/uart.h>
 
@@ -32,6 +33,16 @@ static const char * TAG = "FRM";
 
 #include "ramses_debug.h"
 #define DEBUG_FRAME(_i)   //do{if(_i)DEBUG1_ON;else DEBUG1_OFF;}while(0)
+
+static uint64_t frm_time(void) {
+  uint64_t ts;
+  struct timeval tv;
+  gettimeofday( &tv, NULL );
+  ts = tv.tv_sec * 1000LL + (tv.tv_usec / 1000LL);
+  return ts;
+}
+
+static uint64_t last_frm;
 
 /***********************************************************************************
 ** Frame state machine
@@ -204,8 +215,8 @@ void frame_rx_byte( uint8_t b ) {
           if( rxFrm.msgErr != MSG_OK ) {
             ESP_LOGE( TAG, "raw[%d]=%02x (MSG)",rxFrm.nBytes-1, b );
             rxFrm.state = FRM_RX_ABORT;
+          }
         }
-      }
       }
 
       // Protect raw data buffer
@@ -240,6 +251,8 @@ static void frame_rx_done(void) {
   rssi = cc_read_rssi();
   msg_rx_rssi( rssi );
   msg_rx_end(nBytes,msgErr);
+
+  last_frm = frm_time();
 
   DEBUG_FRAME(0);
   led_off(LED_RX);
@@ -542,6 +555,8 @@ uint8_t frame_tx_byte(uint8_t *byte) {
         done = 1;
       break;
     }
+    last_frm = frm_time();
+
     txFrm.count = 0;
     txFrm.state = FRM_TX_DONE;
     // Fall through
@@ -627,8 +642,11 @@ void frame_work(void) {
     }
     if( rxFrm.state<FRM_RX_MESSAGE ) {
       if( txFrm.state==FRM_TX_READY ) {
-        led_on(LED_TX);
-        frame_tx_enable();
+    	uint64_t now = frm_time();
+    	if( ( now - last_frm ) > CONFIG_FRM_MIN_TX_DELAY ) {
+          led_on(LED_TX);
+          frame_tx_enable();
+    	}
       } else if( rxFrm.state==FRM_RX_OFF ) {
         frame_rx_enable();
       }

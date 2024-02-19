@@ -12,7 +12,14 @@ menu "Frame Configuration"
         	3=Info
         	4=Debug
         	5=Verbose
-        	
+
+    config FRM_MIN_TX_DELAY
+        int "Minimum delay before TX (mS)"
+        range 0 100
+        default	50
+        help
+            Specifies the minimum delay after any RX or TX frame before next TX
+
     config UART_LOG_LEVEL
         int "UART LOG LEVEL"
         range 0	5
