@@ -590,7 +590,7 @@ uint8_t msg_print_all( struct message *msg, char *msg_buff ) {
     len += msg_print( msg, msg_buff+len );
   } while( msg->state != S_COMPLETE );
 
-  len += sprintf( msg_buff+len-2, " # %03d\r\n", msg->seq );
+  len += sprintf( msg_buff+len-2, " # %03d %s\r\n", msg->seq, esp_log_system_timestamp() );
 
   return len;
 }
