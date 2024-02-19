@@ -4,14 +4,14 @@ menu "RAMSES_ESP configuration"
     config RADIO_CORE
     int "Core for Radio Task"
         range 0 1
-        default 0
+        default 1
         help
             The Radio task will run on this core.
 
     config HOST_CORE
     int "Core for Host Task"
         range 0 1
-        default 1
+        default 0
         help
             The Host task will run on this core.
 
