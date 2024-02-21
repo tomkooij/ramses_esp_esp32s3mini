@@ -92,7 +92,7 @@ struct message {
   uint8_t nBytes;
   uint8_t raw[MAX_RAW];
 
-#define MSG_TIMESTAMP 20
+#define MSG_TIMESTAMP 28
   char timestamp[MSG_TIMESTAMP];
   uint8_t seq;
 };
@@ -103,13 +103,19 @@ static void msg_reset( struct message *msg ) {
   }
 }
 
-static void msg_timestamp( char *timestamp ) {
-  time_t now;
-  struct tm timeinfo;
+static char *msg_timestamp( char *timestamp, int len ) {
+  struct timeval tv;
+  struct tm *nowtm;
+  ssize_t written = -1;
 
-  time(&now);
-  localtime_r(&now, &timeinfo);
-  strftime( timestamp, MSG_TIMESTAMP, "%Y-%m-%d %H:%M:%S", &timeinfo );
+  gettimeofday(&tv, NULL);
+  nowtm = localtime(&tv.tv_sec);
+
+  written = (ssize_t)strftime( timestamp,len, "%Y-%m-%dT%H:%M:%S", nowtm);
+  if (( written>0 ) && ( (size_t)written<len ))
+    snprintf( timestamp+written, len-(size_t)written, ".%06ld", tv.tv_usec);
+
+  return timestamp;
 }
 
 char const *msg_get_ts( struct message const  *msg ){ return msg->timestamp; }
@@ -192,7 +198,7 @@ static struct msg_list rx_list;
 
 void msg_rx_ready( struct message **msg ) {
   static uint8_t seq = 0;
-  msg_timestamp( (*msg)->timestamp );
+  msg_timestamp( (*msg)->timestamp, MSG_TIMESTAMP );
   (*msg)->seq = seq++;
   gateway_radio_rx( msg );
 }
@@ -590,7 +596,7 @@ uint8_t msg_print_all( struct message *msg, char *msg_buff ) {
     len += msg_print( msg, msg_buff+len );
   } while( msg->state != S_COMPLETE );
 
-  len += sprintf( msg_buff+len-2, " # %03d %s\r\n", msg->seq, esp_log_system_timestamp() );
+  len += sprintf( msg_buff+len-2, " # %03d %s\r\n", msg->seq, msg_get_ts(msg) );
 
   return len;
 }
