@@ -95,6 +95,20 @@ static int sntp_cmd( int argc, char **argv ) {
 }
 
 /*********************************************************
+ * Timezone
+ */
+
+static int timezone_cmd( int argc, char **argv ) {
+
+  if( argc>1 )
+    NET_set_timezone( argv[1] );
+  else
+	NET_show_timezones();
+
+  return 0;
+}
+
+/*********************************************************
  * Top Level commands
  */
 
@@ -111,6 +125,12 @@ void network_register(void) {
       .help = "SNTP commands, enter 'sntp' for list",
       .hint = NULL,
       .func = &sntp_cmd,
+    },
+    {
+      .command = "timezone",
+      .help = "timezone <tz string>",
+      .hint = NULL,
+      .func = &timezone_cmd,
     },
     // List termination
     { NULL_COMMAND }

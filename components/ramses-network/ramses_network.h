@@ -21,6 +21,8 @@ extern char const *NET_get_mqtt_user(void);
 extern char const *NET_get_mqtt_password(void);
 
 extern void NET_set_sntp_server( char *new_server );
+extern void NET_set_timezone( char *new_timezone );
+extern void NET_show_timezones( void);
 
 extern void ramses_network_init( BaseType_t coreID );
 

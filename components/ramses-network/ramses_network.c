@@ -28,6 +28,7 @@
 #define MQTT_PASSWORD "mqtt_password"
 
 #define SNTP_SERVER "sntp_server"
+#define TIMEZONE    "timezone"
 
 #include "network_cmd.h"
 #include "ramses_network.h"
@@ -48,6 +49,8 @@ struct network_data {
 
   size_t sntp_server_len;
   char *sntp_server;
+  size_t timezone_len;
+  char * timezone;
 };
 
 static struct network_data *network_ctxt( void ) {
@@ -198,6 +201,7 @@ static void net_get_mqtt_params( struct network_data *ctxt ) {
   net_get_mqtt_user( ctxt );
   net_get_mqtt_password( ctxt );
 }
+
 /********************************************************************************
  * SNTP server uri
  */
@@ -238,6 +242,91 @@ void NET_set_sntp_server( char *new_server ) {
     net_set_sntp_server( ctxt, new_server );
 }
 
+/********************************************************************************
+ * Timezones
+ */
+
+static struct tz {
+	char const *abbrev;
+	char const *tz_str;
+} const tz_list[] = {
+	// List of timezones where ramses_esp is likely to be used
+  { "GMT", "GMT0BST+1,M3.5.0/01,M10.5.0/02"},
+  { "CET", "CET-1CEST0,M3.5.0/02,M10.5.0/03"},
+  { "EET", "EET-2EEST-1,M3.5.0/03,M10.5.0/04"},
+  { "WET", "WET0WEST+1,M3.5.0/01,M10.5.0/02"},
+  { "IST", "IST-1GMT0,M10.5.0/02,M3.5.0/01"},
+  { NULL, NULL }
+};
+
+static void net_timezone( char const *tz ) {
+  setenv("TZ", tz,1);
+}
+
+static char const *find_timezone( char const *zone ) {
+  struct tz const *pTz = tz_list;
+  do {
+	if( !strcmp( pTz->abbrev, zone ) ) {
+      zone = pTz->tz_str;
+      break;
+	}
+    pTz++;
+  } while( pTz->abbrev != NULL );
+
+  // If we didn't find a matching abbreviation return the original string
+  return zone;
+}
+
+static void net_set_timezone( struct network_data *ctxt, char *new_timezone ) {
+  char const *new_tz = find_timezone( new_timezone );
+  if( !ctxt->timezone || strcmp( ctxt->timezone, new_tz ) ) {
+    size_t len = strlen( new_tz );
+    if( len >= ctxt->timezone_len ) {
+      if( ctxt->timezone ) free( ctxt->timezone );
+      ctxt->timezone_len = len+1; // Need space for '\0' terminator
+      ctxt->timezone = malloc( ctxt->timezone_len );
+    }
+
+    if( len > 0 ) {
+      if( ctxt->timezone ) {
+        strcpy( ctxt->timezone, new_tz );
+        nvs_set_str( ctxt->nvs, TIMEZONE, ctxt->timezone );
+        net_timezone( ctxt->timezone );
+      }
+    }
+  }
+}
+
+static void net_get_timezone( struct network_data *ctxt ) {
+  esp_err_t err  = nvs_get_str( ctxt->nvs, TIMEZONE, NULL, &ctxt->timezone_len );
+  if( err==ESP_OK ) {
+    if( ctxt->timezone_len!=0 ) {
+      ctxt->timezone = malloc( ctxt->timezone_len );	// length includes '\0' terminator
+      if( ctxt->timezone ) {
+        nvs_get_str( ctxt->nvs, TIMEZONE, ctxt->timezone, &ctxt->timezone_len );
+        net_timezone( ctxt->timezone );
+      }
+    }
+  }
+}
+
+void NET_set_timezone( char *new_timezone ) {
+  struct network_data *ctxt = network_ctxt();
+  if( ctxt && new_timezone )
+    net_set_timezone( ctxt, new_timezone );
+}
+
+void NET_show_timezones( void) {
+  struct tz const *pTz = tz_list;
+
+  printf("Supported timezones (For other zones specify full string)\n");
+  do {
+	printf("%-4s %s\n",pTz->abbrev, pTz->tz_str );
+    pTz++;
+  } while( pTz->abbrev != NULL );
+
+
+}
 
 /********************************************************************************
  * Initialisation
@@ -253,6 +342,7 @@ void ramses_network_init( BaseType_t coreID ) {
   if( err==ESP_OK ) {
     net_get_mqtt_params( ctxt );
     net_get_sntp_server( ctxt );
+    net_get_timezone( ctxt );
   }
 
   ramses_sntp_init( coreID, ctxt->sntp_server );
