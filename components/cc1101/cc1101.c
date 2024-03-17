@@ -202,11 +202,11 @@ void cc_init(void) {
   for ( i=0 ; i<len ; i++ )
     cc_write( i, param[i] );
 
+  cc_write( CC_FIFOTHR, ( param[CC_FIFOTHR]&0xF0 )+14 );	  // TX Fifo Threshold 5
+
   len = cc_pa_get( param );
   for ( i=0 ; i<len ; i++ )
     cc_write( CC_PATABLE, param[i]);
-
-  cc_write( CC_FIFOTHR, ( param[CC_FIFOTHR]&0xF0 )+14 );	  // TX Fifo Threshold 5
 
   cc_enter_rx_mode();
 }
