@@ -594,6 +594,9 @@ static void frame_tx_enable(void) {
   frame.state = FRM_TX;
   txFrm.state = FRM_TX_IDLE;
 
+  // make sure we switch back to RX after TX
+  rxFrm.state = FRM_RX_OFF;
+
   tx_fifo_start();
 }
 
@@ -639,6 +642,7 @@ void frame_work(void) {
   case FRM_RX:
     if( rxFrm.state>=FRM_RX_DONE ) {
       frame_rx_done();
+      rxFrm.state = FRM_RX_IDLE;    // Avoid redundant switch to RX mode
     }
     if( rxFrm.state<FRM_RX_MESSAGE ) {
       if( txFrm.state==FRM_TX_READY ) {
