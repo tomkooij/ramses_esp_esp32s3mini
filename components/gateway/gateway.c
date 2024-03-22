@@ -98,7 +98,7 @@ static void gateway_radio_rx_func( void *param ) {
 	char msgBuff[256];
     uint8_t len = msg_print_all( msg, msgBuff );
     if( len ) {
-      printf(msgBuff);
+      printf("%s\n",msgBuff);
       MQTT_publish_rx( msg_get_ts(msg), msgBuff );
     }
     msg_free( &msg );

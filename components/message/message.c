@@ -405,13 +405,9 @@ static char const *msg_error_str( uint8_t error )
 }
 
 static uint8_t msg_print_error( char *str, uint8_t error ) {
-  uint8_t n;
+  uint8_t n = 0;
 
-  if( error ) {
-    n = sprintf_P( str, PSTR(" * %s\r\n"), msg_error_str(error) );
-  } else {
-    n = sprintf_P(str,PSTR("\r\n"));
-  }
+  ESP_LOGI( TAG, "%s", msg_error_str(error) );
 
   return n;
 }
@@ -419,21 +415,11 @@ static uint8_t msg_print_error( char *str, uint8_t error ) {
 static uint8_t msg_print_raw( char *str, uint8_t raw, uint8_t i ) {
   uint8_t n = 0;
 
-  if( i )
-    n = sprintf_P( str,PSTR("%02X."),raw );
-  else
-    n = sprintf_P( str,PSTR("# %02X."),raw );
-
   return n;
 }
 
 static uint8_t msg_print_bytes( char *str, uint8_t raw, uint8_t i ) {
   uint8_t n = 0;
-
-  if( i )
-    n = sprintf_P( str,PSTR("%c"),raw );
-  else
-    n = sprintf_P( str,PSTR("# %c"),raw );
 
   return n;
 }
@@ -535,7 +521,7 @@ static uint8_t msg_print_field( struct message *msg, char *buff ) {
           nBytes = msg_print_bytes( buff, msg->raw[msg->count], msg->count );
         msg->count++;
       } else if( msg->nBytes ) {
-        nBytes = sprintf_P( buff, PSTR("\r\n") );
+//        nBytes = sprintf_P( buff, PSTR("\r\n") );
         msg->state = S_COMPLETE;
       }
       if( nBytes )
