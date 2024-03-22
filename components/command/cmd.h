@@ -23,6 +23,8 @@ extern void cmd_menu_register( esp_console_cmd_t const *cmd );
 
 extern esp_err_t cmd_run( char const *cmdline, int *cmd_ret );
 
-extern void cmd_init(void);
+struct cmd_data;
+extern struct cmd_data *cmd_init(void);
+extern void cmd_work( struct cmd_data *data );
 
 #endif // _CMD_H_

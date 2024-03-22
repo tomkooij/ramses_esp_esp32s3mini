@@ -17,10 +17,11 @@ static const char *TAG = "HOST";
 #include "freertos/task.h"
 
 #include "esp_system.h"
-#include "cmd.h"
 
+#include "cmd.h"
 #include "ramses-mqtt.h"
 #include "gateway.h"
+
 #include "host.h"
 
 struct host_data {
@@ -31,33 +32,20 @@ struct host_data {
 /*************************************************************************
  * TASK
  */
-#define CMD '!'
-
-struct tty_ctxt {
-  char buf[256];
-  bool cmd;
-};
-
-static void tty_work(struct tty_ctxt *ctxt) {
-
-}
-
 static void Host_Task( void *param )
 {
   struct host_data *ctxt = param;
+  struct cmd_data *cmd_data;
 
   ESP_LOGI( TAG, "Task Started");
 
   // Basic console initialisation
-  cmd_init();
+  cmd_data = cmd_init();
   ramses_mqtt_init( ctxt->coreID );
 
   gateway_init( ctxt->coreID );
 
-  while(1){
-//    ESP_LOGI( TAG, "Loop");
-    vTaskDelay(1000/ portTICK_PERIOD_MS );
-  }
+  cmd_work( cmd_data );
 }
 
 /*************************************************************************

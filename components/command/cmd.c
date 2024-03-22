@@ -11,6 +11,7 @@
 static const char *TAG = "CMD";
 #include "esp_log.h"
 
+#include "driver/usb_serial_jtag.h"
 #include "esp_system.h"
 
 #include "cmd.h"
@@ -56,32 +57,48 @@ void cmd_menu_register( esp_console_cmd_t const *cmd ) {
   }
 }
 
-/*********************************************************
- * Console initialisation
+/*************************************************************************
+ * Console input
  */
 
-static void console_init(void) {
-  esp_console_repl_t *repl = NULL;
-  esp_console_repl_config_t repl_config = ESP_CONSOLE_REPL_CONFIG_DEFAULT();
-  /* Prompt to be printed before each line.
-   * This can be customized, made dynamic, etc.
-   */
-  repl_config.prompt = "";
-  repl_config.max_cmdline_length = 1024;
+static void console_init( char *line, int len ) {
+  usb_serial_jtag_driver_config_t config = {
+    .rx_buffer_size = 1024,
+    .tx_buffer_size = 1024
+  };
+  ESP_ERROR_CHECK( usb_serial_jtag_driver_install(&config) );
 
-#if defined(CONFIG_ESP_CONSOLE_UART_DEFAULT) || defined(CONFIG_ESP_CONSOLE_UART_CUSTOM)
-    esp_console_dev_uart_config_t hw_config = ESP_CONSOLE_DEV_UART_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_console_new_repl_uart(&hw_config, &repl_config, &repl));
+  // Flush the input buffer
+  while( usb_serial_jtag_read_bytes( line, len, 0 ) ){}
+}
 
-#elif defined(CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG)
-    esp_console_dev_usb_serial_jtag_config_t hw_config = ESP_CONSOLE_DEV_USB_SERIAL_JTAG_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_console_new_repl_usb_serial_jtag(&hw_config, &repl_config, &repl));
+static int console_readline( char *line, int len ) {
+  int n = 0;
 
-#else
-#error Unsupported console type
-#endif
+  do {
+    int ret;
+    do {
+      // Read one char at a time so we don't have to remember
+      // any characters from next line already in USB buffer
+      ret = usb_serial_jtag_read_bytes( line+n, 1, 0 );
+        if( ret>0 ) {
+        if( line[n] == '\r' ) {
+          if( n>0 ) {
+            line[n]='\0';
+            return n;
+          }
+        } else if( line[n] == '\b' ) {
+          if( n>0 ) n=n-1;
+        } else if( line[n] >= ' ' ) {    // Discard other non-printing characters
+            n++;
+        }
+        }
+    } while( ret );
+    // USB buffer is empty
+    vTaskDelay(10/portTICK_PERIOD_MS);
+  } while(1);
 
-  ESP_ERROR_CHECK(esp_console_start_repl(repl));
+  return -1;    // Cannot reach here
 }
 
 /*********************************************************
@@ -127,6 +144,12 @@ static int cmd_cmd( int argc, char **argv ) {
 void cmd_register(void) {
   esp_console_cmd_t const *cmd;
 
+  esp_console_config_t console_config = {
+    .max_cmdline_args = 10,
+    .max_cmdline_length = 256,
+  };
+  ESP_ERROR_CHECK( esp_console_init(&console_config) );
+
   esp_console_register_help_command();
 
   for( cmd=cmd_cmds ; cmd->command!=NULL ; cmd++ )
@@ -143,7 +166,36 @@ esp_err_t cmd_run( char const *cmdline, int *cmd_ret ) {
   return err;
 }
 
-void cmd_init(void) {
-  console_init();
+static struct cmd_data {
+  char line[256];
+} cmd_data ;
+
+struct cmd_data *cmd_init(void) {
+  static struct cmd_data *data = &cmd_data;
+
+  console_init( data->line, sizeof(data->line) );
   cmd_register();
+
+  return data;
+}
+
+
+void cmd_work( struct cmd_data *data ) {
+  for( ;; ) {
+    int ret;
+    esp_err_t err;
+
+    console_readline( data->line, sizeof(data->line) );
+
+    err = esp_console_run( data->line, &ret );
+    if( err==ESP_ERR_NOT_FOUND ) {
+      ESP_LOGI(TAG, "Unrecognized command <%s>",data->line );
+    } else if( err==ESP_ERR_INVALID_ARG ) {
+      // command was empty
+    } else if( err==ESP_OK && ret!=ESP_OK) {
+      ESP_LOGI(TAG, "Command returned non-zero error code: 0x%x (%s)\n", ret, esp_err_to_name(ret));
+    } else if( err!=ESP_OK ) {
+      ESP_LOGI(TAG, "Internal error: %s\n", esp_err_to_name(err));
+    }
+  }
 }
