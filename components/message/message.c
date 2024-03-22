@@ -407,8 +407,6 @@ static char const *msg_error_str( uint8_t error )
 static uint8_t msg_print_error( char *str, uint8_t error ) {
   uint8_t n = 0;
 
-  ESP_LOGI( TAG, "%s", msg_error_str(error) );
-
   return n;
 }
 
@@ -504,7 +502,6 @@ static uint8_t msg_print_field( struct message *msg, char *buff ) {
     /* fallthrough */
 
   case S_ERROR:
-    // This always includes "\r\n"
     nBytes = msg_print_error( buff, msg->error );
     msg->state = S_TRAILER;
     if( nBytes )

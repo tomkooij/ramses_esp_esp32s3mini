@@ -95,11 +95,16 @@ static void gateway_radio_rx_func( void *param ) {
   ESP_LOGI( TAG, "process rx message %p",msg);
 
   if( msg ) {
-	char msgBuff[256];
+    char msgBuff[256];
     uint8_t len = msg_print_all( msg, msgBuff );
     if( len ) {
-      printf("%s\n",msgBuff);
-      MQTT_publish_rx( msg_get_ts(msg), msgBuff );
+      if( msg_isValid(msg) ) {
+        printf("%s\n",msgBuff);
+        MQTT_publish_rx( msg_get_ts(msg), msgBuff );
+      }
+      else {
+        ESP_LOGW( TAG,"Dropped <%s>",msgBuff );
+      }
     }
     msg_free( &msg );
   }
