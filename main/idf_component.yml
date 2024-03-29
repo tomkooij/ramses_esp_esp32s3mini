@@ -1,3 +1,5 @@
 ## IDF Component Manager Manifest File
-dependencies:
-  idf: "^5.0"
+dependencies:   
+# problems with OTA using later versions of idf (mbedTLS v3.5?)
+  idf: 
+    version: "==5.1.1"
