@@ -49,7 +49,14 @@ static int ota_cmd_filename( int argc, char **argv ) {
  */
 static int ota_cmd_start( int argc, char **argv ) {
 
-  ota_start();
+  ota_start(0);
+
+  return 0;
+}
+
+static int ota_cmd_force( int argc, char **argv ) {
+
+  ota_start(1);
 
   return 0;
 }
@@ -81,6 +88,12 @@ static esp_console_cmd_t const ota_cmds[] = {
     .help = "Start OTA",
     .hint = NULL,
     .func = ota_cmd_start,
+  },
+  {
+    .command = "force",
+    .help = "Force OTA",
+    .hint = NULL,
+    .func = ota_cmd_force,
   },
   // List termination
   { NULL_COMMAND }

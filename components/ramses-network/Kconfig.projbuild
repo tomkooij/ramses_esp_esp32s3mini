@@ -99,7 +99,7 @@ menu "Network Configuration"
             
   config OTA_FILENAME
     string "Image filename"
-        default "download/ramses_esp.bin"
+        default "ramses_esp.bin"
         help
             Filename of image
 

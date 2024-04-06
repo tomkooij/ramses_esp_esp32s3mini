@@ -30,7 +30,8 @@ struct ota_data {
 
   char url[176];
   char version[16];
-  char filename[64];
+  char filename[32];
+  uint8_t force;
 
   esp_https_ota_handle_t ota_handle;
 };
@@ -108,8 +109,12 @@ static esp_err_t ota_check_file_hdr( struct ota_data *ctxt ) {
 
 	if( err==ESP_OK ) {
 	  if( memcmp( app_info.version, running_app_info.version, sizeof(app_info.version) ) == 0 ) {
-	    ESP_LOGW(TAG, "Current running version is the same as a new. We will not continue the update.");
-	    err=ESP_FAIL;
+		if( ctxt->force ) {
+          ESP_LOGW(TAG, "Current running version is the same as new. Update being forced.");
+		} else {
+          ESP_LOGW(TAG, "Current running version is the same as new. We will not continue the update.");
+	      err=ESP_FAIL;
+		}
 	  } else {
         ESP_LOGI(TAG, "Downloading firmware version %s",app_info.version);
 	  }
@@ -168,7 +173,13 @@ static void Ota( void *param ) {
   };
 
   ESP_LOGI( TAG, "Task Started");
-  sprintf( url, "%s/%s/%s", ctxt->url,ctxt->version,ctxt->filename);
+  if( !strcmp( ctxt->version,"latest" ) ) {
+    sprintf( url, "%s/%s/download/%s", ctxt->url,ctxt->version,ctxt->filename);
+  } else {
+	ctxt->force = 1;   // Always update with a specific version
+    sprintf( url, "%s/download/%s/%s", ctxt->url,ctxt->version,ctxt->filename);
+  }
+  ESP_LOGI(TAG, "URL <%s>",url );
 
   err = ota_begin( &ota_config, ctxt );
   if( err==ESP_OK ) {
@@ -205,8 +216,9 @@ void ota_set_filename( const char * filename ){
   strncpy( ctxt->filename, filename, sizeof(ctxt->filename)-1 );
 }
 
-void ota_start(void) {
+void ota_start( uint8_t force ) {
   struct ota_data *ctxt = ota_ctxt();
+  ctxt->force = force;
   xTaskCreatePinnedToCore( Ota, "OTA", 8*1024, ctxt, 5, NULL, ctxt->coreID );
 }
 

@@ -15,7 +15,7 @@
 extern void ota_set_url( const char * url );
 extern void ota_set_version( const char * version );
 extern void ota_set_filename( const char * filename );
-extern void ota_start(void);
+extern void ota_start( uint8_t force);
 
 extern void ramses_ota_init( BaseType_t coreID );
 
