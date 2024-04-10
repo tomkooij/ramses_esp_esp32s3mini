@@ -8,6 +8,7 @@
  */
 
 #include "ramses_debug.h"
+#include "debug_cmd.h"
 
 void ramses_debug_init(void) {
   if( DEBUG_MASK ) {
@@ -21,5 +22,7 @@ void ramses_debug_init(void) {
     gpio_config(&io_conf);
 
     DEBUG1_OFF; DEBUG2_OFF; DEBUG3_OFF; DEBUG4_OFF; DEBUG5_OFF; DEBUG6_OFF;
+
+    debug_register();
   };
 }
