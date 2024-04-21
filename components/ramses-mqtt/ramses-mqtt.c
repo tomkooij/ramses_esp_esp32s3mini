@@ -220,15 +220,14 @@ static void mqtt_subscribe_tx( struct mqtt_data *ctxt ) {
 
 static void mqtt_process_tx( struct mqtt_data *ctxt, char const *data, int dataLen ) {
   cJSON *json, *msg;
-  char tx[256];
 
   ESP_LOGI( TAG, "TX:<%.*s> %s", dataLen,data,esp_log_system_timestamp() );
 
   json = cJSON_Parse( data );
   msg = cJSON_GetObjectItem( json, "msg" );
 
-  sprintf( tx, "%s\r\n", msg->valuestring );
-  gateway_tx( tx );
+  ESP_LOGD( TAG, "<%s>", msg->valuestring );
+  gateway_tx( msg->valuestring );
 
   cJSON_Delete( json );
 }
