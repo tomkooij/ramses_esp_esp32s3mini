@@ -18,6 +18,7 @@ static const char *TAG = "MQTT";
 #include "esp_app_desc.h"
 
 #include "mqtt_client.h"
+#include "cJSON.h"
 
 #include "cmd.h"
 #include "device.h"
@@ -185,14 +186,21 @@ static void mqtt_publish_info( struct mqtt_data *ctxt ) {
  * RX message
  */
 static void mqtt_publish_rx( struct mqtt_data *ctxt, char const *ts, char const *msg ) {
-  char topic[64], rx[256];
+  cJSON *json = cJSON_CreateObject();
+  char *rx;
+  char topic[64];
 
   char *end = strstr( msg,"\r\n");
   if( end ) end[0] = '\0';
 
+  cJSON_AddStringToObject( json, "msg", msg );
+  cJSON_AddStringToObject( json, "ts",  ts );
+
+  rx = cJSON_Print( json );
   sprintf( topic, "%s/rx", ctxt->topic );
-  sprintf( rx , "{\"ts\":\"%s\", \"msg\":\"%s\"}",ts,msg);
   esp_mqtt_client_publish( ctxt->client,topic, rx, 0, 1, 0 );
+
+  cJSON_Delete( json );
 }
 
 void MQTT_publish_rx( char const *ts, char const *msg ) {
@@ -211,12 +219,17 @@ static void mqtt_subscribe_tx( struct mqtt_data *ctxt ) {
 }
 
 static void mqtt_process_tx( struct mqtt_data *ctxt, char const *data, int dataLen ) {
-  char msg[128];
-  sprintf( msg,"%.*s", dataLen,data );	// Make sure msg contains trailing '\0'
+  cJSON *json, *msg;
 
-  ESP_LOGI( TAG, "TX:<%s> %s", msg,esp_log_system_timestamp() );
+  ESP_LOGI( TAG, "TX:<%.*s> %s", dataLen,data,esp_log_system_timestamp() );
 
-  gateway_tx( msg );
+  json = cJSON_Parse( data );
+  msg = cJSON_GetObjectItem( json, "msg" );
+
+  ESP_LOGD( TAG, "<%s>", msg->valuestring );
+  gateway_tx( msg->valuestring );
+
+  cJSON_Delete( json );
 }
 
 /*******************************************************************************
