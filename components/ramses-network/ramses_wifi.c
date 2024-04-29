@@ -294,6 +294,7 @@ static void wifi_state_machine( struct wifi_data *ctxt ) {
     break;
 
   case WIFI_CREATED:
+    printf("# Attempting to connect to SSID:%s\n", (char *)ctxt->station_config.sta.ssid );
     wifi_start( ctxt );
     ctxt->state = WIFI_STARTED;
     ESP_LOGI( TAG, "WiFi started");
@@ -302,10 +303,12 @@ static void wifi_state_machine( struct wifi_data *ctxt ) {
   case WIFI_STARTED:
     if( bits & WIFI_CONNECTED_BIT ) {
       ESP_LOGI( TAG, "connected to ap SSID:%s", (char *)ctxt->station_config.sta.ssid );
+      printf("# Connected to SSID:%s\n", (char *)ctxt->station_config.sta.ssid );
       ctxt->state = WIFI_CONNECTED;
       xEventGroupClearBits( ctxt->event_group, WIFI_CONNECTED_BIT );
     } else if( bits & WIFI_FAIL_BIT ) {
       ESP_LOGI( TAG, "Failed to connect to SSID:%s",(char *)ctxt->station_config.sta.ssid );
+      printf("# Failed to connect to SSID:%s\n", (char *)ctxt->station_config.sta.ssid );
       ctxt->state = WIFI_FAILED;
       xEventGroupClearBits( ctxt->event_group, WIFI_FAIL_BIT );
     }
