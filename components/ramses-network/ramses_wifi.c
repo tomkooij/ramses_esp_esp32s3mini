@@ -286,7 +286,7 @@ static void wifi_state_machine( struct wifi_data *ctxt ) {
 
   switch( ctxt->state ){
   case WIFI_IDLE:
-    if( ctxt->station_config.sta.ssid[0] != '\0' && ctxt->station_config.sta.password[0] != '\0' ) {
+    if( ctxt->station_config.sta.ssid[0] != '\0' ) {
       wifi_create(ctxt);
       ctxt->state = WIFI_CREATED;
       ESP_LOGI( TAG, "WiFi created");
