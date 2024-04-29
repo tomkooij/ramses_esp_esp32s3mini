@@ -31,7 +31,7 @@ static esp_console_cmd_func_t cmd_lookup( esp_console_cmd_t const *list, char *c
 
 static void cmd_help( esp_console_cmd_t const *list, char const *prefix ) {
   while( list->func ) {
-	printf("%s %-10s %s\n",prefix,list->command,list->help );
+	printf("# %s %-10s %s\n",prefix,list->command,list->help );
 	list++;
   }
 }
@@ -85,6 +85,7 @@ static int console_readline( char *line, int len ) {
         if( line[n] == '\r' ) {
           if( n>0 ) {
             line[n]='\0';
+            printf( "# %s\n", line );
             return n;
           }
         } else if( line[n] == '\b' ) {

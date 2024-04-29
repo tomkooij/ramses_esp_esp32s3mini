@@ -105,18 +105,22 @@ static esp_err_t ota_check_file_hdr( struct ota_data *ctxt ) {
     err = esp_ota_get_partition_description( running, &running_app_info );
 	if( err==ESP_OK ) {
 	  ESP_LOGI(TAG, "Running firmware version: %s", running_app_info.version);
+	  printf("# OTA: Running firmware version: %s\n", running_app_info.version);
 	}
 
 	if( err==ESP_OK ) {
 	  if( memcmp( app_info.version, running_app_info.version, sizeof(app_info.version) ) == 0 ) {
 		if( ctxt->force ) {
           ESP_LOGW(TAG, "Current running version is the same as new. Update being forced.");
+          printf("# OTA: Force update to %s\n",app_info.version);
 		} else {
           ESP_LOGW(TAG, "Current running version is the same as new. We will not continue the update.");
+          printf("# OTA: Target version is same as current version - no update\n");
 	      err=ESP_FAIL;
 		}
 	  } else {
         ESP_LOGI(TAG, "Downloading firmware version %s",app_info.version);
+        printf("# OTA: downloading firmware version %s\n",app_info.version);
 	  }
 	}
   }
@@ -143,12 +147,15 @@ static esp_err_t ota_finish( struct ota_data *ctxt ) {
   if( esp_https_ota_is_complete_data_received(ctxt->ota_handle) != true ) {
     // the OTA image was not completely received and user can customise the response to this situation.
     ESP_LOGE(TAG, "Complete data was not received.");
+    printf("# OTA: complete data was not received\n");
   } else {
     err = esp_https_ota_finish( ctxt->ota_handle );
     if( err!=ESP_OK ) {
       if( err == ESP_ERR_OTA_VALIDATE_FAILED ) {
         ESP_LOGE(TAG, "Image validation failed, image is corrupted");
+        printf("# OTA: Image corrupted\n");
       } else {
+        printf("# OTA: upgrde failed\n");
         ESP_LOGE(TAG, "upgrade failed 0x%x", err);
       }
     }
@@ -190,6 +197,7 @@ static void Ota( void *param ) {
   }
 
   if( err==ESP_OK ) {
+    printf("# OTA: Upgrade complete. Rebooting ...\n");
     ESP_LOGI(TAG, "ESP_HTTPS_OTA upgrade successful. Rebooting ...");
     vTaskDelay( 1000 / portTICK_PERIOD_MS );
     esp_restart();
