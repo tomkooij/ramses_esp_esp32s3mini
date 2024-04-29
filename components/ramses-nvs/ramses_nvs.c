@@ -50,31 +50,28 @@ static int nvs_dump_cmd( int argc, char **argv ) {
   res = nvs_entry_find(NVS_DEFAULT_PART_NAME, NULL, NVS_TYPE_ANY, &it);
   while( res==ESP_OK ) {
 	char value[32], *pValue=value;
+	char const *type="?";
 	nvs_entry_info_t info;
 	nvs_handle_t h;
     nvs_entry_info(it, &info); // Can omit error check if parameters are guaranteed to be non-NULL
     nvs_open( info.namespace_name, NVS_READONLY, &h );
     switch( info.type ) {
-    case NVS_TYPE_U8:	{uint8_t  v; nvs_get_u8(h,info.key,&v); sprintf(value,"%u",v);  } break;
-    case NVS_TYPE_I8:	{ int8_t  v; nvs_get_i8(h,info.key,&v); sprintf(value,"%d",v);  } break;
-    case NVS_TYPE_U16:	{uint16_t v; nvs_get_u16(h,info.key,&v);sprintf(value,"%u",v);  } break;
-    case NVS_TYPE_I16:	{ int16_t v; nvs_get_i16(h,info.key,&v);sprintf(value,"%d",v);  } break;
-    case NVS_TYPE_U32:	{uint32_t v; nvs_get_u32(h,info.key,&v);sprintf(value,"%lu",v); } break;
-    case NVS_TYPE_I32:	{ int32_t v; nvs_get_i32(h,info.key,&v);sprintf(value,"%ld",v); } break;
-    case NVS_TYPE_U64:	{uint64_t v; nvs_get_u64(h,info.key,&v);sprintf(value,"%llu",v);} break;
-    case NVS_TYPE_I64:	{ int64_t v; nvs_get_i64(h,info.key,&v);sprintf(value,"%lld",v);} break;
-    case NVS_TYPE_STR:
-    case NVS_TYPE_BLOB:
-      size_t len=32;
-      nvs_get_str( h,info.key,value,&len);
-      value[31]= '\0';
-      break;
+    case NVS_TYPE_U8:   {uint8_t  v; type="<u8>"; nvs_get_u8(h,info.key,&v); sprintf(value,"%u",v);  } break;
+    case NVS_TYPE_I8:   { int8_t  v; type="<i8>"; nvs_get_i8(h,info.key,&v); sprintf(value,"%d",v);  } break;
+    case NVS_TYPE_U16:  {uint16_t v; type="<u16>"; nvs_get_u16(h,info.key,&v);sprintf(value,"%u",v);  } break;
+    case NVS_TYPE_I16:  { int16_t v; type="<i16>"; nvs_get_i16(h,info.key,&v);sprintf(value,"%d",v);  } break;
+    case NVS_TYPE_U32:  {uint32_t v; type="<u32>"; nvs_get_u32(h,info.key,&v);sprintf(value,"%lu",v); } break;
+    case NVS_TYPE_I32:  { int32_t v; type="<i32>"; nvs_get_i32(h,info.key,&v);sprintf(value,"%ld",v); } break;
+    case NVS_TYPE_U64:  {uint64_t v; type="<u64>"; nvs_get_u64(h,info.key,&v);sprintf(value,"%llu",v);} break;
+    case NVS_TYPE_I64:  { int64_t v; type="<i64>"; nvs_get_i64(h,info.key,&v);sprintf(value,"%lld",v);} break;
+    case NVS_TYPE_STR:  {size_t len=32; type="<str>"; nvs_get_str( h,info.key,value,&len); value[31]= '\0';} break;
+    case NVS_TYPE_BLOB: { type="<blob>"; value[0]='\0'; } break;
     default:
       pValue = "unknown";
       break;
     }
     nvs_close(h);
-    printf("[%s]: key '%s', type '%d' %s\n", info.namespace_name, info.key, info.type, pValue );
+    printf("[%s]: key '%s'%s %s\n", info.namespace_name, info.key, type, pValue );
 
     res = nvs_entry_next(&it);
   }
