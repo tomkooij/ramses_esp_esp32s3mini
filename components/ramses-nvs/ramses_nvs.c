@@ -71,7 +71,7 @@ static int nvs_dump_cmd( int argc, char **argv ) {
       break;
     }
     nvs_close(h);
-    printf("[%s]: key '%s'%s %s\n", info.namespace_name, info.key, type, pValue );
+    printf("# [%s]: key '%s'%s %s\n", info.namespace_name, info.key, type, pValue );
 
     res = nvs_entry_next(&it);
   }
