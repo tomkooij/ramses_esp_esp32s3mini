@@ -325,6 +325,7 @@ static void mqtt_event_handler( void *handler_args, esp_event_base_t base, int32
 
   case MQTT_EVENT_DISCONNECTED:
     ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
+    printf("# MQTT: Disonnected\n");
     break;
 
   case MQTT_EVENT_SUBSCRIBED:
@@ -379,6 +380,7 @@ static void mqtt_state_machine( struct mqtt_data *ctxt ) {
       sprintf( ctxt->topic,"%s/%s",ctxt->root,dev );
       ctxt->client = esp_mqtt_client_init( &ctxt->cfg );
       ESP_LOGI( TAG, "Connecting to %s",ctxt->cfg.broker.address.uri );
+      printf("# MQTT: Connecting to %s\n",ctxt->cfg.broker.address.uri );
       esp_mqtt_client_register_event( ctxt->client, ESP_EVENT_ANY_ID, mqtt_event_handler, ctxt );
       esp_mqtt_client_start( ctxt->client );
       mqtt_set_state( ctxt,MQTT_STARTING );
@@ -389,6 +391,7 @@ static void mqtt_state_machine( struct mqtt_data *ctxt ) {
 	break;
 
   case MQTT_CONNECTED:
+    printf("# MQTT: Connected\n");
     esp_mqtt_client_publish( ctxt->client, ctxt->topic, "online", 0, 1, 1);
     mqtt_subscribe_tx( ctxt );
     mqtt_publish_cmd( ctxt );  // Clear old CMD
