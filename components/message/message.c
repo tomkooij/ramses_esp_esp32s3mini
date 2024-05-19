@@ -92,7 +92,7 @@ struct message {
   uint8_t nBytes;
   uint8_t raw[MAX_RAW];
 
-#define MSG_TIMESTAMP 28
+#define MSG_TIMESTAMP 36
   char timestamp[MSG_TIMESTAMP];
 };
 
@@ -111,8 +111,14 @@ static char *msg_timestamp( char *timestamp, int len ) {
   nowtm = localtime(&tv.tv_sec);
 
   written = (ssize_t)strftime( timestamp,len, "%Y-%m-%dT%H:%M:%S", nowtm);
-  if (( written>0 ) && ( (size_t)written<len ))
-    snprintf( timestamp+written, len-(size_t)written, ".%06ld", tv.tv_usec);
+  if (( written>0 ) && ( (size_t)(written+7)<len ))
+    written += snprintf( timestamp+written, len-(size_t)written, ".%06ld", tv.tv_usec);
+  if (( written>0 ) && ( (size_t)(written+6)<len )) {
+	char tz[8];
+	strftime( tz,8, "%z", nowtm );
+	// strftime does not generate ISO 8601 timezone - there's no ':'
+	written += sprintf( timestamp+written,"%c%c%c:%c%c", tz[0],tz[1],tz[2],tz[3],tz[4] );
+  }
 
   return timestamp;
 }
