@@ -20,6 +20,13 @@ menu "Frame Configuration"
         help
             Specifies the minimum delay after any RX or TX frame before next TX
 
+    config FRM_MAX_CAL_INTERVAL
+        int "Maximum interval between cc1101 calibrations (sec)"
+        range 0 300
+        default	30
+        help
+            Specifies the maximum interval between cc1101 calibrations
+
     config UART_LOG_LEVEL
         int "UART LOG LEVEL"
         range 0	5

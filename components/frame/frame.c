@@ -43,6 +43,7 @@ static uint64_t frm_time(void) {
 }
 
 static uint64_t last_frm;
+static uint64_t last_cal;
 
 /***********************************************************************************
 ** Frame state machine
@@ -585,6 +586,8 @@ static void frame_rx_enable(void) {
   rxFrm.state = FRM_RX_IDLE;
 
   uart_rx_enable();
+
+  last_cal = frm_time();
 }
 
 static void frame_tx_enable(void) {
@@ -640,20 +643,39 @@ void frame_work(void) {
     break;
 
   case FRM_RX:
-    if( rxFrm.state>=FRM_RX_DONE ) {
+    if( rxFrm.state==FRM_RX_DONE ) {
       frame_rx_done();
-      rxFrm.state = FRM_RX_IDLE;    // Avoid redundant switch to RX mode
+      rxFrm.state = FRM_RX_IDLE;    // Avoid switch to IDLE and back to RX mode
+      break;
     }
-    if( rxFrm.state<FRM_RX_MESSAGE ) {
-      if( txFrm.state==FRM_TX_READY ) {
-    	uint64_t now = frm_time();
-    	if( ( now - last_frm ) > CONFIG_FRM_MIN_TX_DELAY ) {
+
+    if( rxFrm.state==FRM_RX_ABORT ) {
+      // Force a calibration after any error
+      frame_rx_done();
+      frame_rx_enable();
+      break;
+    }
+
+    if( rxFrm.state<FRM_RX_MESSAGE ) { // RX not active
+   	  uint64_t now = frm_time();
+      if( ( now - last_frm ) > CONFIG_FRM_MIN_TX_DELAY ) {
+        if( txFrm.state==FRM_TX_READY ) {
           led_on(LED_TX);
           frame_tx_enable();
-    	}
-      } else if( rxFrm.state==FRM_RX_OFF ) {
-        frame_rx_enable();
+          break;
+        }
+
+        if ( ( now - last_cal ) > CONFIG_FRM_MAX_CAL_INTERVAL*1000 ) {
+          // Force a recalibration if we haven't done one for a while
+          frame_rx_enable();
+          break;
+        }
       }
+    }
+
+    if( rxFrm.state==FRM_RX_OFF ) {
+      frame_rx_enable();
+      break;
     }
     break;
 
@@ -662,9 +684,10 @@ void frame_work(void) {
       led_off(LED_TX);
       frame_tx_done();
       frame_rx_enable();
-    } else {
-      tx_fifo_work();
+      break;
     }
+
+    tx_fifo_work();
     break;
   }
 
