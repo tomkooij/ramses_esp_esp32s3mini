@@ -1,4 +1,4 @@
-set(component_srcs "message.c")
+set(component_srcs "message.c" "msg.c")
 
 idf_component_register(
     SRCS "${component_srcs}"
