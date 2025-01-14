@@ -39,7 +39,7 @@ struct gateway_data {
 static struct gateway_data *gateway_ctxt( void ) {
   static struct gateway_data gateway;
 
-  struct gateway_data *ctxt = NULL;
+  static struct gateway_data *ctxt = NULL;
   if( !ctxt ){
     ctxt = &gateway;
     // Initialisation?
