@@ -14,6 +14,7 @@
 
 #define MAX_RAW 162
 #define MAX_PAYLOAD 64
+#define MAX_ADDR 3
 struct message {
   struct message *next;
   struct message *prev;
@@ -25,7 +26,7 @@ struct message {
   uint8_t rxFields;  // Fields actually received
   uint8_t error;
 
-  uint8_t addr[3][3];
+  uint8_t addr[MAX_ADDR][3];
   uint8_t param[2];
 
   uint8_t opcode[2];
@@ -64,12 +65,16 @@ enum message_state {
   S_ERROR
 };
 
+#define _MSG_TYPE_LIST \
+  _MSG_TYPE( F_RQ,      "RQ" ) \
+  _MSG_TYPE( F_I,       "I"  ) \
+  _MSG_TYPE( F_W,       "W"  ) \
+  _MSG_TYPE( F_RP,      "RP" ) \
 
-#define F_MASK  0x03
-#define F_RQ    0x00
-#define F_I     0x01
-#define F_W     0x02
-#define F_RP    0x03
+#define _MSG_TYPE(_e,_t) _e,
+enum msg_type { _MSG_TYPE_LIST MSG_TYPE_MAX };
+#undef _MSG_TYPE
+#define F_MASK   0x03
 
 #define F_ADDR0  0x10
 #define F_ADDR1  0x20
@@ -93,18 +98,31 @@ enum message_state {
 #define HDR_PARAM0 0x02
 #define HDR_PARAM1 0x01
 
-extern void msg_reset( struct message *msg );
+
 extern char *msg_timestamp( char *timestamp, int len );
 
-extern uint8_t msg_get_hdr_flags(uint8_t header );
-extern uint8_t msg_get_header( uint8_t flags );
+extern uint8_t msg_decode_header( uint8_t header );
+extern uint8_t msg_encode_header( uint8_t flags );
+
+extern void msg_reset( struct message *msg );
+
+extern void msg_set_fields( struct message *msg, uint8_t  fields );
+extern void msg_get_fields( struct message *msg, uint8_t *fields );
+
+extern void msg_set_address( struct message *msg, uint8_t i, uint32_t  addr );
+extern void msg_get_address( struct message *msg, uint8_t i, uint32_t *addr );
+
+extern void msg_set_opcode( struct message *msg, uint16_t  opcode );
+extern void msg_get_opcode( struct message *msg, uint16_t *opcode );
+
+extern void msg_set_payload( struct message *msg, uint8_t  len, uint8_t  *payload );
+extern void msg_get_payload( struct message *msg, uint8_t *len, uint8_t **payload );
 
 extern uint8_t msg_checksum( struct message *msg );
 
-extern void msg_set_address( uint8_t *addr, uint8_t class, uint32_t id );
-extern void msg_get_address( uint8_t *addr, uint8_t *class, uint32_t *id );
-
 extern uint8_t msg_isValid( struct message *msg );
 extern uint8_t msg_isTx( struct message *msg );
+
+extern struct message *msg_create( enum msg_type type, uint32_t addr[MAX_ADDR], uint16_t opcode, uint8_t len, uint8_t *payload );
 
 #endif // _MSG_H_

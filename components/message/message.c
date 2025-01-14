@@ -28,7 +28,10 @@ static const char * TAG = "MSG";
 #define TRACE(_t)     ( 0 )
 #define DEBUG_MSG(_i) do{}while(0)
 
-static char const * const MsgType[4] = { "RQ", "I","W","RP" };
+
+#define _MSG_TYPE(_e,_t) _t,
+static char const * const MsgType[MSG_TYPE_MAX] = { _MSG_TYPE_LIST };
+#undef _MSG_TYPE
 
 /********************************************************
 ** Message lists
@@ -155,7 +158,7 @@ static uint8_t msg_print_addr( char *str, uint8_t *addr, uint8_t valid ) {
   if( valid ) {
     uint8_t class;
     uint32_t id;
-	msg_get_address( addr, &class,&id );
+	msg_decode_address( addr, &class,&id );
 
     n = sprintf_P(str, PSTR("%02hu:%06lu "), class, id );
   } else {
@@ -408,7 +411,7 @@ uint8_t msg_print_all( struct message *msg, char *msg_buff ) {
 static uint8_t msg_rx_header( struct message *msg, uint8_t byte ) {
   uint8_t state = S_ADDR0;
 
-  msg->fields = msg_get_hdr_flags( byte );
+  msg->fields = msg_decode_header( byte );
 
   ESP_LOGD( TAG, "HDR %02x", msg->fields);
 
@@ -597,9 +600,9 @@ void msg_change_addr( struct message *msg, uint8_t addr, uint8_t Class,uint32_t 
 	uint8_t class;
 	uint32_t id;
 
-	msg_get_address( Addr, &class, &id );
+	msg_decode_address( Addr, &class, &id );
 	if( class==Class && id==Id ) // address matches
-	  msg_set_address( Addr, myClass, myId ); 
+	  msg_encode_address( Addr, myClass, myId );
   }
 }
 
@@ -612,7 +615,7 @@ static uint8_t msg_scan_addr( struct message *msg, char *str, uint8_t nChar ) {
     uint32_t id;
 
   	if( nChar<11 && 2==sscanf( str, "%hhu:%lu", &class, &id ) ) {
-	  msg_set_address( msg->addr[addr], class, id );
+	  msg_encode_address( msg->addr[addr], class, id );
       msg->fields |= F_ADDR0 << addr;
       ok = 1;
     } 
@@ -778,7 +781,7 @@ static uint8_t msg_tx_header( struct message *msg, uint8_t *done ) {
   uint8_t byte = 0;
 
   if( msg->count < 1 ) {
-    byte = msg_get_header( msg->fields );
+    byte = msg_encode_header( msg->fields );
     msg->count++;
   } else {
     msg->count = 0;
