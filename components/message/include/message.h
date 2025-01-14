@@ -68,6 +68,18 @@ extern void msg_encode_address( uint8_t *addr, uint8_t  class, uint32_t  id );
 extern void msg_decode_address( uint8_t *addr, uint8_t *class, uint32_t *id );
 extern void msg_make_address( uint32_t *addr, uint8_t  class, uint32_t  id );
 
+extern void msg_0016_request_tx( uint32_t devAddr, uint32_t ctlAddr, uint8_t len, uint8_t *payload );
+extern void msg_0016_reply_rx( struct message *msg, uint8_t *len, uint8_t **payload );
+
+extern void msg_10A0_request_tx( uint32_t devAddr, uint32_t ctlAddr, uint8_t len, uint8_t *payload );
+extern void msg_10A0_reply_rx( struct message *msg, uint8_t *len, uint8_t **payload );
+
+extern void msg_1260_tx( uint32_t devAddr, uint8_t zone, uint16_t temp );
+
+extern void msg_1FC9_request_tx( uint32_t devAddr, uint8_t len, uint8_t *payload );
+extern void msg_1FC9_reply_rx( struct message *msg );
+extern void msg_1FC9_ack_tx( uint32_t devAddr, uint32_t ctlAddr, uint8_t len, uint8_t *payload );
+
 extern void msg_init(void);
 extern void msg_work(void);
 
