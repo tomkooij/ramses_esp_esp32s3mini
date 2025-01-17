@@ -21,4 +21,12 @@ menu "RAMSES_ESP configuration"
       default 0
       help
           GPIO pin number of Function Button          
+
+    config CS_PLATFORM_PIN
+    int "CS Pin"
+      range 0 41
+      default 12
+        help
+        	GPIOx for CS Platform
+
 endmenu

@@ -2,7 +2,7 @@
 # for more information about component CMakeLists.txt files.
 
 idf_component_register(
-    SRCS main.c radio.c host.c
+    SRCS main.c radio.c host.c platform.c
     INCLUDE_DIRS
     PRIV_INCLUDE_DIRS
     REQUIRES driver esp_app_format esp_event console 
