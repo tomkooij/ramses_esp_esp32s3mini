@@ -48,7 +48,7 @@ void app_main(void)
   ramses_network_init( CONFIG_HOST_CORE );
 
   Radio_init( CONFIG_RADIO_CORE );
-  Host_init( CONFIG_HOST_CORE );
+  Host_init( CONFIG_HOST_CORE, platforms );
 
   gpio_reset_pin( CONFIG_FUNCTION_PIN );
   gpio_set_direction( CONFIG_FUNCTION_PIN, GPIO_MODE_INPUT );

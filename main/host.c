@@ -22,11 +22,13 @@ static const char *TAG = "HOST";
 #include "ramses-mqtt.h"
 #include "gateway.h"
 
+#include "platform.h"
 #include "host.h"
 
 struct host_data {
   BaseType_t coreID;
   TaskHandle_t task;
+  uint8_t platforms;
 };
 
 /*************************************************************************
@@ -43,7 +45,8 @@ static void Host_Task( void *param )
   cmd_data = cmd_init();
   ramses_mqtt_init( ctxt->coreID );
 
-  gateway_init( ctxt->coreID );
+  if( ctxt->platforms & PLATFORM_GW )
+    gateway_init( ctxt->coreID );
 
   cmd_work( cmd_data );
 }
@@ -55,7 +58,7 @@ static void Host_Task( void *param )
 static struct host_data *host_context( void ) {
   static struct host_data host;
 
-  struct host_data *ctxt = NULL;
+  static struct host_data *ctxt = NULL;
   if( !ctxt ){
 	ctxt = &host;
 	// Initialisation?
@@ -65,10 +68,11 @@ static struct host_data *host_context( void ) {
 }
 
 
-void Host_init( BaseType_t coreID ) {
+void Host_init( BaseType_t coreID, uint8_t platforms ) {
   struct host_data *ctxt = host_context();
 
   ctxt->coreID = coreID;
+  ctxt->platforms = platforms;
 
   xTaskCreatePinnedToCore( Host_Task,  "Host",  4096, ctxt, 10, &ctxt->task, ctxt->coreID );
 }
