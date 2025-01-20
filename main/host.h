@@ -10,6 +10,6 @@
 #ifndef _HOST_H_
 #define _HOST_H_
 
-extern void Host_init(BaseType_t coreID);
+extern void Host_init(BaseType_t coreID, uint8_t platforms );
 
 #endif // _HOST_H_
