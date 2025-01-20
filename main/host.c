@@ -36,38 +36,56 @@ struct host_data {
 };
 
 /*************************************************************************
- * TASK
+ * Use FUNC button to trigger system restart
  */
+#define RESTART_INTERVAL ( CONFIG_RESTART_DELAY*1000 / portTICK_PERIOD_MS )
+
+static struct restart {
+  StaticTimer_t timer;
+  TimerHandle_t hTimer;
+  uint8_t expired;
+} restart;
 
 void host_button_cb( struct button_event *event ) {
-  static TickType_t ticks = 0;
   static int8_t level = -1;
 
   if( event ) {
     if( event->level != level ) {
       switch( event->level ) {
       case 0:  // Button pressed
-        // Nothing specific to do
-    	break;
+   	    xTimerStartFromISR( restart.hTimer, NULL );
+        restart.expired = 0;
+        break;
 
       default:	// Button released
-    	if( level!=-1 ) {
-          TickType_t period = (level==-1) ? 0
-                                          : event->ticks - ticks;
-          if( period > ( 1000 / portTICK_PERIOD_MS )) {
-            printf("Restarting...\n");
-            fflush(stdout);
-      	    esp_restart();
-          }
+        xTimerStopFromISR( restart.hTimer, NULL );
+    	if( restart.expired ) {
+      	  esp_restart();
     	}
         break;
       }
 
-      ticks = event->ticks;
       level = event->level;
     }
   }
 }
+
+static void restartTimerCB( TimerHandle_t xTimer ) {
+  struct restart *restart = pvTimerGetTimerID( xTimer );
+  if( !restart->expired ) {
+	restart->expired = 1;
+    printf("Restarting...\n");
+    fflush(stdout);
+  }
+}
+
+static void enable_restart(void) {
+  restart.hTimer = xTimerCreateStatic( "Restart", RESTART_INTERVAL, pdFALSE, &restart, restartTimerCB, &restart.timer );
+}
+
+/*************************************************************************
+ * TASK
+ */
 
 static void Host_Task( void *param )
 {
@@ -80,6 +98,7 @@ static void Host_Task( void *param )
   cmd_data = cmd_init();
   ramses_mqtt_init( ctxt->coreID );
 
+  enable_restart();
   button_register( BUTTON_FUNC, host_button_cb );
 
   if( ctxt->platforms & PLATFORM_GW )
