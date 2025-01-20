@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include "esp_system.h"
 #include "esp_app_desc.h"
-#include "driver/gpio.h"
+#include "esp_intr_alloc.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -24,6 +24,7 @@
 
 #include "ramses_debug.h"
 #include "ramses_led.h"
+#include "ramses_buttons.h"
 #include "ramses_nvs.h"
 #include "ramses_network.h"
 
@@ -40,34 +41,15 @@ void app_main(void)
   if( platforms!=PLATFORM_GW )  // Don't change behaviour of pure gateway device'
     printf("# %02x\n", platforms );
 
+  ESP_ERROR_CHECK( gpio_install_isr_service(0) ) ;
   ESP_ERROR_CHECK( esp_event_loop_create_default() );
 
   ramses_debug_init();
   ramses_led_init();
+  ramses_buttons_init( CONFIG_HOST_CORE );
   ramses_nvs_init();
   ramses_network_init( CONFIG_HOST_CORE );
 
   Radio_init( CONFIG_RADIO_CORE );
   Host_init( CONFIG_HOST_CORE, platforms );
-
-  gpio_reset_pin( CONFIG_FUNCTION_PIN );
-  gpio_set_direction( CONFIG_FUNCTION_PIN, GPIO_MODE_INPUT );
-
-  /* Read the status of GPIO0.
-   * If GPIO0 is LOW for longer than 1000 ms then restart it
-   */
-  while( 1 ) {
-    if( gpio_get_level(CONFIG_FUNCTION_PIN)==0 ) {
-      vTaskDelay( 1000 / portTICK_PERIOD_MS );
-      if( gpio_get_level(CONFIG_FUNCTION_PIN)==0 ) {
-        printf("Restarting...\n");
-        fflush(stdout);
-        // Wait for release
-        while( ( gpio_get_level(CONFIG_FUNCTION_PIN)==0 ) )
-          vTaskDelay( 200 / portTICK_PERIOD_MS );
-        esp_restart();
-      }
-    }
-    vTaskDelay( 200 / portTICK_PERIOD_MS );
-  }
 }
